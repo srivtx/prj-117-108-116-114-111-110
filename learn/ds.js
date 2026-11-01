@@ -162,9 +162,106 @@
     }
   }
 
+  /* ============================================================
+     RootishArrayStack — ODS §2.6. Blocks of size 1,2,3,…:
+     O(√n) wasted space instead of O(n).
+     ============================================================ */
+  class RootishArrayStack {
+    constructor() { this.blocks = []; this.n = 0; this.log = []; }
+    static i2b(i) { let r = Math.ceil((Math.sqrt(8 * i + 9) - 3) / 2); const want = r * (r + 1) / 2; if (want > i + 1) r--; return r; }
+    grow() { this.blocks.push(new Array(this.blocks.length + 1)); this.log.push({ op: 'grow', b: this.blocks.length - 1, size: this.blocks.length }); }
+    shrink() { this.blocks.pop(); this.log.push({ op: 'shrink' }); }
+    get(i) { if (i < 0 || i > this.n - 1) throw new RangeError(); const b = RootishArrayStack.i2b(i); const j = i - b * (b + 1) / 2; return this.blocks[b][j]; }
+    set(i, x) { const b = RootishArrayStack.i2b(i), j = i - b * (b + 1) / 2; const y = this.blocks[b][j]; this.blocks[b][j] = x; return y; }
+    add(i, x) {
+      if (i < 0 || i > this.n) throw new RangeError();
+      const r = this.blocks.length;
+      if (r * (r + 1) / 2 < this.n + 1) this.grow();
+      this.log.push({ op: 'shift', i, count: this.n - i, cost: this.n - i + 1 });
+      for (let k = this.n; k > i; k--) {
+        const bFrom = RootishArrayStack.i2b(k - 1), jFrom = (k - 1) - bFrom * (bFrom + 1) / 2;
+        const bTo = RootishArrayStack.i2b(k), jTo = k - bTo * (bTo + 1) / 2;
+        this.blocks[bTo][jTo] = this.blocks[bFrom][jFrom];
+      }
+      const b = RootishArrayStack.i2b(i), j = i - b * (b + 1) / 2;
+      this.blocks[b][j] = x; this.n++;
+      this.log.push({ op: 'add', i, x, b });
+    }
+    remove(i) {
+      if (i < 0 || i > this.n - 1) throw new RangeError();
+      const x = this.get(i);
+      for (let k = i; k < this.n - 1; k++) {
+        const bFrom = RootishArrayStack.i2b(k + 1), jFrom = (k + 1) - bFrom * (bFrom + 1) / 2;
+        const bTo = RootishArrayStack.i2b(k), jTo = k - bTo * (bTo + 1) / 2;
+        this.blocks[bTo][jTo] = this.blocks[bFrom][jFrom];
+      }
+      // clear the vacated last cell so blocks hold no stale values
+      const bLast = RootishArrayStack.i2b(this.n - 1), jLast = (this.n - 1) - bLast * (bLast + 1) / 2;
+      this.blocks[bLast][jLast] = undefined;
+      this.n--;
+      const r = this.blocks.length;
+      if (r > 2 && (r - 2) * (r - 1) / 2 >= this.n) this.shrink();
+      this.log.push({ op: 'remove', i, x });
+      return x;
+    }
+    size() { return this.n; }
+    snapshot() { return { kind: 'rootish', blocks: this.blocks.map(b => b.slice()), n: this.n }; }
+  }
+
+  /* ============================================================
+     SLList / DLList — ODS §3.1–3.2. Nodes + pointers.
+     ============================================================ */
+  class SLList {
+    constructor() { this.head = null; this.tail = null; this.n = 0; this.log = []; }
+    push(x) { const node = { id: nid(), x, next: this.head }; this.head = node; if (this.tail === null) this.tail = node; this.n++; this.log.push({ op: 'push', id: node.id, x, cost: 1 }); return node; }
+    pop() {
+      if (!this.head) throw new RangeError('empty');
+      const node = this.head; this.head = node.next; if (!this.head) this.tail = null;
+      this.n--; this.log.push({ op: 'pop', id: node.id, x: node.x, cost: 1 }); return node.x;
+    }
+    addLast(x) { const node = { id: nid(), x, next: null }; if (this.tail) this.tail.next = node; else this.head = node; this.tail = node; this.n++; this.log.push({ op: 'addlast', id: node.id, x, cost: 1 }); return node; }
+    size() { return this.n; }
+    snapshot() { const items = []; let p = this.head; while (p) { items.push({ id: p.id, x: p.x }); p = p.next; } return { kind: 'sllist', items }; }
+  }
+
+  class DLList {
+    constructor() {
+      this.dummy = { id: nid(), x: null, prev: null, next: null };
+      this.dummy.prev = this.dummy; this.dummy.next = this.dummy;
+      this.n = 0; this.log = [];
+    }
+    getNode(i) {
+      let p, dir;
+      if (i < this.n / 2) { p = this.dummy.next; dir = 1; for (let k = 0; k < i; k++) p = p.next; }
+      else { p = this.dummy.prev; dir = -1; for (let k = this.n - 1; k > i; k--) p = p.prev; }
+      this.log.push({ op: 'walk', i, steps: dir === 1 ? i + 1 : this.n - i, cost: Math.min(i + 1, this.n - i) });
+      return p;
+    }
+    get(i) { return this.getNode(i).x; }
+    addBefore(node, x) {
+      const u = { id: nid(), x, prev: node.prev, next: node };
+      node.prev.next = u; node.prev = u; this.n++;
+      this.log.push({ op: 'splice', id: u.id, x, cost: 1 });
+      return u;
+    }
+    add(i, x) { const node = i === this.n ? this.dummy : this.getNode(i); return this.addBefore(node, x); }
+    removeNode(node) {
+      node.prev.next = node.next; node.next.prev = node.prev; this.n--;
+      this.log.push({ op: 'unlink', id: node.id, x: node.x, cost: 1 });
+      return node.x;
+    }
+    remove(i) { const node = this.getNode(i); return this.removeNode(node); }
+    size() { return this.n; }
+    snapshot() {
+      const items = []; let p = this.dummy.next;
+      while (p !== this.dummy) { items.push({ id: p.id, x: p.x }); p = p.next; }
+      return { kind: 'dllist', items };
+    }
+  }
+
   /* ---------- exports (browser + node) ---------- */
   const DS = {
-    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque
+    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList
   };
   if (typeof window !== 'undefined') window.ULTRON_DS = DS;
   if (typeof globalThis !== 'undefined') globalThis.ULTRON_DS = DS;
