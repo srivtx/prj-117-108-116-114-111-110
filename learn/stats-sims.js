@@ -300,4 +300,166 @@
     });
   }
 
+  /* ============================================================
+     S5 · BAYES (the medical test)
+     ============================================================ */
+  {
+    let api, cv;
+    const st = { prev: 0.01, sens: 0.9, fpr: 0.05 };
+    function ppv() { const p = st.prev; return (st.sens * p) / (st.sens * p + st.fpr * (1 - p)); }
+    function draw() {
+      const f = chart(cv), { g, w, h, ink, muted, line, c1, c2, c3, c4 } = f();
+      const N = 1000;
+      const cols = Math.floor(Math.sqrt(N * (w - 20) / (h - 20)));
+      const rows = Math.ceil(N / cols);
+      const cw = (w - 20) / cols, chh = (h - 20) / rows;
+      const sick = Math.round(N * st.prev);
+      for (let i = 0; i < N; i++) {
+        const x = 10 + (i % cols) * cw, y = 8 + Math.floor(i / cols) * chh;
+        const isSick = i < sick;
+        const testPos = isSick ? Math.random() < st.sens : Math.random() < st.fpr;
+        g.fillStyle = isSick ? (testPos ? c1 : c3) : (testPos ? c4 : line);
+        g.fillRect(x + .5, y + .5, cw - 1.2, chh - 1.2);
+      }
+      g.fillStyle = ink; g.font = '600 13px "IBM Plex Mono", monospace';
+      g.fillText(`P(sick | positive) = ${(ppv() * 100).toFixed(1)}%`, 12, h - 12);
+      g.fillStyle = muted; g.font = '11.5px "IBM Plex Sans"';
+      g.fillText(`1,000 people · ${sick} sick (red = sick & positive · amber = healthy & positive)`, 12, h - 30);
+    }
+    window.ULTRON_STATS.push({
+      id: 's5', tab: 'Bayes', kind: '2d',
+      title: 'Bayes — the test is not the truth',
+      lede: 'A 90%-accurate test for a 1%-rare disease reports positive. What is the chance you are actually sick? Intuition says 90%. Bayes says otherwise — and the grid shows why.',
+      mount(a) {
+        api = a; cv = a.canvas2d(); draw();
+        const c = api.controls();
+        c.innerHTML = `
+          <div class="ctl"><label>prevalence</label><input type="range" id="bp" min="1" max="50" value="1"><output id="bpo">1%</output></div>
+          <div class="ctl"><label>sensitivity</label><input type="range" id="bs" min="50" max="100" value="90"><output id="bso">90%</output></div>
+          <div class="ctl"><label>false-positive rate</label><input type="range" id="bf" min="1" max="30" value="5"><output id="bfo">5%</output></div>
+          <p class="note">Drag prevalence and watch the same test tell a completely different story. The rarer the disease, the more the positives are liars.</p>`;
+        $('#bp').oninput = e => { st.prev = +e.target.value / 100; $('#bpo').textContent = e.target.value + '%'; draw(); api.statsFn(); };
+        $('#bs').oninput = e => { st.sens = +e.target.value / 100; $('#bso').textContent = e.target.value + '%'; draw(); api.statsFn(); };
+        $('#bf').oninput = e => { st.fpr = +e.target.value / 100; $('#bfo').textContent = e.target.value + '%'; draw(); api.statsFn(); };
+      },
+      state: st, draw, ppv
+    });
+  }
+
+  /* ============================================================
+     S6 · BIRTHDAY PARADOX → hash collisions (ties to W05)
+     ============================================================ */
+  {
+    let api, cv;
+    const st = { days: 365, trials: 0, firsts: [] };
+    function oneTrial() {
+      const seen = new Set();
+      for (let m = 1; ; m++) {
+        const d = Math.floor(Math.random() * st.days);
+        if (seen.has(d)) { st.trials++; return m; }
+        seen.add(d);
+      }
+    }
+    function draw() {
+      const f = chart(cv), { g, w, h, ink, muted, line, c1, c2, c3 } = f();
+      const maxM = Math.min(80, Math.ceil(st.days / 2));
+      const counts = new Array(maxM + 1).fill(0);
+      st.firsts.forEach(m => { if (m <= maxM) counts[m]++; });
+      const maxC = Math.max(1, ...counts);
+      const bw = (w - 30) / maxM;
+      for (let m = 1; m <= maxM; m++) {
+        const bh = counts[m] / maxC * (h - 70);
+        g.fillStyle = m === 23 ? c1 : c2;
+        g.fillRect(15 + (m - 1) * bw, h - 36 - bh, Math.max(1, bw - 1.5), bh);
+      }
+      g.fillStyle = muted; g.font = '11px "IBM Plex Mono", monospace';
+      g.fillText('people in room when the FIRST shared birthday appears', 15, h - 18);
+      g.fillStyle = ink; g.font = '600 13px "IBM Plex Mono", monospace';
+      const half = st.firsts.filter(m => m <= 23).length / (st.trials || 1);
+      g.fillText(`${st.trials} rooms simulated · P(collision by 23 people) ≈ ${(half * 100).toFixed(0)}%  (theory 50.7%)`, 15, 20);
+      g.fillStyle = muted; g.font = '11.5px "IBM Plex Sans"';
+      g.fillText(`√(365·2·ln2) ≈ 22.5 — the collision scale is the SQUARE ROOT of the space`, 15, 38);
+    }
+    window.ULTRON_STATS.push({
+      id: 's6', tab: 'Birthday', kind: '2d',
+      title: 'The birthday paradox — collisions come early',
+      lede: '23 people and a shared birthday is a coin flip. Not because 23 is big — because pairs grow quadratically: 23 people = 253 pairs. This exact arithmetic sizes hash tables (W05) and GUIDs.',
+      mount(a) {
+        api = a; cv = a.canvas2d(); draw();
+        const c = api.controls();
+        c.innerHTML = `
+          <div class="ctl"><label>days / buckets</label><input type="range" id="bd" min="16" max="365" value="365"><output id="bdo">365</output></div>
+          <div class="btns">
+            <button class="btn primary" id="b1">one room</button>
+            <button class="btn" id="b500">500 rooms</button>
+            <button class="btn" id="br">reset</button>
+          </div>
+          <p class="note">Set buckets to <b>16</b>: this becomes W05's hash table — ~6 inserts for a 50% collision. Same math, smaller universe.</p>`;
+        $('#bd').oninput = e => { st.days = +e.target.value; $('#bdo').textContent = st.days; st.firsts = []; st.trials = 0; draw(); };
+        $('#b1').onclick = () => { st.firsts.push(oneTrial()); draw(); api.statsFn(); };
+        $('#b500').onclick = () => { for (let i = 0; i < 500; i++) st.firsts.push(oneTrial()); draw(); api.statsFn(); };
+        $('#br').onclick = () => { st.firsts = []; st.trials = 0; draw(); api.statsFn(); };
+      },
+      state: st, draw, oneTrial
+    });
+  }
+
+  /* ============================================================
+     S7 · VARIANCE & SPREAD
+     ============================================================ */
+  {
+    let api, cv;
+    const st = { spread: 1 };
+    function draw() {
+      const f = chart(cv), { g, w, h, ink, muted, line, c1, c2, c3 } = f();
+      const mu = 0, sig = st.spread;
+      const N = 220;
+      const xs = [], ys = [];
+      let sum = 0, sum2 = 0;
+      // Box-Muller samples
+      for (let i = 0; i < N; i++) {
+        const u1 = Math.random() || 1e-9, u2 = Math.random();
+        const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        xs.push(z * sig); sum += z * sig; sum2 += (z * sig) ** 2;
+      }
+      const mean = sum / N, varr = sum2 / N - mean * mean;
+      // dot plot
+      const X = v => w / 2 + v / (4 * Math.max(0.6, sig)) * w / 2;
+      xs.forEach(v => {
+        const y = 30 + Math.random() * (h - 110);
+        g.fillStyle = c2; g.globalAlpha = .65;
+        g.beginPath(); g.arc(X(v), y, 2.6, 0, 7); g.fill(); g.globalAlpha = 1;
+      });
+      // mean and ±σ bands
+      g.strokeStyle = c1; g.setLineDash([5, 4]);
+      [mean, mean - Math.sqrt(varr), mean + Math.sqrt(varr)].forEach((v, k) => {
+        g.beginPath(); g.moveTo(X(v), 22); g.lineTo(X(v), h - 70); g.stroke();
+      });
+      g.setLineDash([]);
+      g.fillStyle = muted; g.font = '11px "IBM Plex Mono", monospace';
+      g.fillText('mean', X(mean) - 14, 16); g.fillText('−σ', X(mean - Math.sqrt(varr)) - 6, 16); g.fillText('+σ', X(mean + Math.sqrt(varr)) - 6, 16);
+      g.fillStyle = ink; g.font = '600 13px "IBM Plex Mono", monospace';
+      g.fillText(`mean ${mean.toFixed(2)} · variance ${varr.toFixed(2)} · σ ${Math.sqrt(varr).toFixed(2)} (target σ = ${sig})`, 15, h - 40);
+      g.fillStyle = muted; g.font = '11.5px "IBM Plex Sans"';
+      g.fillText('two datasets can share a mean and tell opposite stories — variance is the story', 15, h - 22);
+    }
+    window.ULTRON_STATS.push({
+      id: 's7', tab: 'Variance', kind: '2d',
+      title: 'Variance — the average of surprises',
+      lede: 'The mean says where the center is; variance says how far the truth wanders. It is E[(X − μ)²] — literally the expected squared surprise — and it is why quicksort\'s worst case matters even though its average is fine.',
+      mount(a) {
+        api = a; cv = a.canvas2d(); draw();
+        const c = api.controls();
+        c.innerHTML = `
+          <div class="ctl"><label>spread σ</label><input type="range" id="vs" min="2" max="40" value="10"><output id="vso">1.0</output></div>
+          <div class="btns"><button class="btn primary" id="vd">redraw sample</button></div>
+          <p class="note">Same machinery, different σ. Variance is what ODS means by "expected running time" having fine print: an expected O(n log n) with huge variance feels very different from one with small variance.</p>`;
+        $('#vs').oninput = e => { st.spread = +e.target.value / 10; $('#vso').textContent = st.spread.toFixed(1); draw(); api.statsFn(); };
+        $('#vd').onclick = () => { draw(); api.statsFn(); };
+      },
+      state: st, draw
+    });
+  }
+
+  const $ = s => document.querySelector(s);
 })();
