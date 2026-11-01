@@ -253,4 +253,206 @@
     });
   }
 
+  /* ============================================================
+     LAB 7 · YOUR OWN FRAMEWORK — signals + effects
+     ============================================================ */
+  {
+    window.ULTRON_BUILDS2.push({
+      id: 'frame', tab: 'Framework', minutes: 45,
+      title: 'Build a reactive framework',
+      lede: 'Vue, Solid and React\'s hooks are all one idea: <em>values that know who depends on them</em>. Build a signal/effect graph in ~40 lines and you have the core of every modern UI framework — then watch the dependency graph light up live.',
+      render(main) {
+        main.innerHTML = `
+        <div class="prose">
+        <h3>Use it first — this counter is alive; the graph below it is the framework watching itself</h3>
+        <div class="split">
+          <div class="block">
+            <h4>The app</h4>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="btn" id="fw-dec">−</button>
+              <b id="fw-count" style="font:700 28px var(--f-mono)">2</b>
+              <button class="btn" id="fw-inc">+</button>
+              <span style="font:15px var(--f-mono)">×2 =</span>
+              <b id="fw-dbl" style="font:700 28px var(--f-mono)">4</b>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+              <input type="text" id="fw-name" value="ada" style="width:90px">
+              <span style="font:14px var(--f-mono)">→</span>
+              <b id="fw-up" style="font:600 16px var(--f-mono)">ADA</b>
+            </div>
+            <p class="note" id="fw-runs"></p>
+          </div>
+          <div class="block">
+            <h4>Dependency graph (live)</h4>
+            <div id="fw-graph" style="font:12px var(--f-mono);min-height:170px"></div>
+          </div>
+        </div>
+        <h3>How it works — three functions total</h3>
+        <div class="cols">
+          <div class="block"><h4>signal(v)</h4><p style="font-size:13px">A cell holding v, plus a set of <i>subscribers</i>. Reading it while an effect runs records the edge automatically; writing notifies exactly those effects.</p></div>
+          <div class="block"><h4>effect(fn)</h4><p style="font-size:13px">Run fn; every signal it touched now owns it. Re-run when any of them writes. Crucially: <b>re-collect dependencies every run</b> (stale edges must die).</p></div>
+          <div class="block"><h4>computed(fn)</h4><p style="font-size:13px">A signal whose value another effect keeps fresh — a derived cell. That's the whole reactivity model.</p></div>
+        </div>
+        <p>The counter demonstrates the <b>precision</b> of the design: incrementing <code>count</code> re-runs the doubled label, but nothing else; typing re-runs only the uppercase effect. No diffing of the whole page, no re-render of the world — exactly the edges that changed, exactly the effects that needed them.</p>
+        </div>`;
+        const SIG = window.ULTRON_SIG;
+        let effectRuns = 0;
+        const nodes = []; // {name, kind, flash:0}
+        function flash(name) { const n = nodes.find(x => x.name === name); if (n) { n.flash = 1; drawGraph(); } }
+        const count = SIG.signal(2);
+        const nameS = SIG.signal('ada');
+        const doubled = SIG.computed(() => count() * 2);
+        let dblRuns = 0;
+        SIG.effect(() => { $('#fw-count').textContent = count(); flash('count'); });
+        SIG.effect(() => { $('#fw-dbl').textContent = doubled(); flash('doubled'); });
+        SIG.effect(() => { $('#fw-up').textContent = nameS().toUpperCase(); flash('upper'); });
+        $('#fw-inc').onclick = () => { count.set(count.peek() + 1); flash('count'); note(); };
+        $('#fw-dec').onclick = () => { count.set(count.peek() - 1); flash('count'); note(); };
+        $('#fw-name').oninput = e => { nameS.set(e.target.value); flash('name'); note(); };
+        function note() {
+          $('#fw-runs').textContent = `only the touched edges re-ran — press + repeatedly and watch which boxes flash`;
+        }
+        function drawGraph() {
+          const box = (n) => {
+            const col = n.kind === 'signal' ? 'var(--c2)' : n.kind === 'computed' ? 'var(--c4)' : 'var(--c3)';
+            const glow = n.flash > 0 ? `box-shadow:0 0 0 3px color-mix(in srgb, ${col} 55%, transparent);` : '';
+            return `<div style="border:2px solid ${col};border-radius:8px;padding:5px 10px;margin:4px;${glow}transition:box-shadow .25s">${n.name}</div>`;
+          };
+          $('#fw-graph').innerHTML = `
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+              ${box(find('count'))} ${box(find('name'))}
+              <span style="color:var(--muted)">→</span> ${box(find('doubled'))}
+              <span style="color:var(--muted)">→</span>
+              <div style="display:flex;flex-direction:column">${box(find('upper'))}${box(find('DOM'))}</div>
+            </div>
+            <div class="note" style="margin-top:8px">violet = signal · amber = computed · green = effect (DOM write)</div>`;
+          for (const n of nodes) if (n.flash > 0) { n.flash = 0; setTimeout(drawGraph, 320); break; }
+        }
+        function find(name) { let n = nodes.find(x => x.name === name); if (!n) { n = { name, kind: name === 'count' || name === 'name' ? 'signal' : name === 'doubled' ? 'computed' : 'effect', flash: 0 }; nodes.push(n); } return n; }
+        find('count'); find('name'); find('doubled'); find('upper'); find('DOM');
+        drawGraph();
+        main.appendChild(milestones([
+          ['signal(v) with subscribers', 'A closure: value + Set of effects. set() notifies them. 15 lines.'],
+          ['The global "currently running effect"', 'One variable. Reads during an effect wire the edge; that\'s automatic dependency tracking.'],
+          ['effect(fn) with cleanup', 'Before each re-run, remove yourself from every old subscriber set — otherwise branches you no longer read keep firing you (the classic memory leak).'],
+          ['computed(fn)', 'An effect writing into a private signal. Derived state in 5 lines.'],
+          ['Prove precision', 'Add a log line per effect run. Increment count: 2 effects run (count DOM + doubled chain), the name effect stays silent. That precision is the entire pitch of signals.']
+        ]));
+        main.appendChild(section('Where this goes', `<p style="font-size:13.5px">Vue 3's reactivity, SolidJS, Preact signals and Vue's vapor mode are this graph with a scheduler on top (batched writes, priorities). React's hooks answer the same need with immutable snapshots + a diffing virtual DOM — a different trade on the same problem. Now "framework magic" is a data structure you have personally built: <b>a graph of dependencies with auto-discovered edges</b>.</p>`));
+      }
+    });
+  }
+
+  /* ============================================================
+     LAB 8 · NEURAL NETWORK — autograd from scratch
+     ============================================================ */
+  {
+    window.ULTRON_BUILDS2.push({
+      id: 'nn', tab: 'Neural net', minutes: 75,
+      title: 'Build a neural network',
+      lede: 'Backpropagation is not magic — it is the chain rule, applied to a graph of arithmetic. Build a 60-line <em>autograd engine</em> (every value remembers how it was made), then teach a 2-4-1 network XOR — the function a single neuron provably cannot learn.',
+      render(main) {
+        main.innerHTML = `
+        <div class="prose">
+        <h3>Use it first — watch a network learn XOR live</h3>
+        <div class="split">
+          <div class="block">
+            <canvas id="nn-loss" width="330" height="140" style="width:100%;border:1px solid var(--line);border-radius:8px"></canvas>
+            <div class="btns">
+              <button class="btn primary" id="nn-100">train 100</button>
+              <button class="btn" id="nn-1000">train 1,000</button>
+              <button class="btn" id="nn-reset">reset weights</button>
+            </div>
+            <div id="nn-outs" style="font:12.5px var(--f-mono);margin-top:8px"></div>
+          </div>
+          <div class="block">
+            <h4>Decision boundary (learned)</h4>
+            <canvas id="nn-map" width="120" height="120" style="width:100%;max-width:220px;border:1px solid var(--line);border-radius:8px;image-rendering:pixelated"></canvas>
+            <p class="note">corners = the 4 XOR inputs, colored by what the network currently predicts there. Blue→red = 0→1.</p>
+          </div>
+        </div>
+        <h3>How it works — three ideas stacked</h3>
+        <div class="cols">
+          <div class="block"><h4>1 · Values remember</h4><p style="font-size:13px">Every number in the network is a node with children + a local-derivative rule. <code>a×b</code> routes gradient ×b and ×a; <code>tanh</code> multiplies by 1−t². Nothing else.</p></div>
+          <div class="block"><h4>2 · Backward = reverse walk</h4><p style="font-size:13px">Topological-sort the graph (built in W12!), start at the loss with gradient 1, walk backwards, each node adds its local rule into the children. <b>That's the chain rule, mechanized.</b></p></div>
+          <div class="block"><h4>3 · Learn = nudge downhill</h4><p style="font-size:13px">p ← p − lr·∂loss/∂p for every parameter. Repeat on the 4 XOR rows. Loss falls; the map bends; the impossible function becomes learnable.</p></div>
+        </div>
+        <p>Why XOR matters: a single neuron is a straight line — it cannot separate XOR's corners no matter the weights. Two lines (the hidden layer) can frame the diagonal band. <b>Depth buys geometry.</b> Everything after this — attention, transformers, billion-parameter models — is this same engine with more graph.</p>
+        </div>`;
+        const NN = window.ULTRON_NN;
+        let net = new NN.MLP([2, 4, 1]);
+        const xs = [[0, 0], [0, 1], [1, 0], [1, 1]], ys = [0, 1, 1, 0];
+        const history = [];
+        const lossCv = $('#nn-loss'), lg = lossCv.getContext('2d');
+        const mapCv = $('#nn-map'), mg = mapCv.getContext('2d');
+        function drawLoss() {
+          const css = getComputedStyle(document.documentElement);
+          lg.clearRect(0, 0, lossCv.width, lossCv.height);
+          if (history.length < 2) return;
+          const max = Math.max(...history, 0.1);
+          lg.strokeStyle = css.getPropertyValue('--c2'); lg.lineWidth = 1.5; lg.beginPath();
+          history.forEach((v, i) => {
+            const x = i / (history.length - 1) * (lossCv.width - 8) + 4;
+            const y = lossCv.height - 8 - (v / max) * (lossCv.height - 20);
+            if (!i) lg.moveTo(x, y); else lg.lineTo(x, y);
+          });
+          lg.stroke();
+          lg.fillStyle = css.getPropertyValue('--muted'); lg.font = '10px monospace';
+          lg.fillText('loss (was ' + history[0].toFixed(3) + ', now ' + history[history.length - 1].toFixed(3) + ')', 6, 12);
+        }
+        function drawMap() {
+          const N = 40;
+          const img = mg.createImageData(N, N);
+          for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+            const v = net.forward([i / (N - 1), j / (N - 1)])[0].v;
+            const r = Math.round(60 + 195 * v), b = Math.round(255 - 195 * v);
+            const o = (j * N + i) * 4;
+            img.data[o] = r; img.data[o + 1] = 90; img.data[o + 2] = b; img.data[o + 3] = 255;
+          }
+          mg.putImageData(img, 0, 0);
+          // corners: (0,0)=0 (1,1)=0 top-left/bottom-right blue; (1,0),(0,1) red
+          const css = getComputedStyle(document.documentElement);
+          mg.fillStyle = css.getPropertyValue('--ink');
+          mg.font = '9px monospace';
+          [[0, 0, '0'], [N - 1, 0, '1'], [0, N - 1, '1'], [N - 1, N - 1, '0']].forEach(([cx, cy, t]) => {
+            mg.fillStyle = '#fff'; mg.fillRect(cx - 5, cy - 5, 10, 10);
+            mg.fillStyle = css.getPropertyValue('--ink'); mg.fillText(t, cx - 3, cy + 3);
+          });
+        }
+        function outs() {
+          $('#nn-outs').innerHTML = xs.map((x, i) => {
+            const v = net.forward(x)[0].v;
+            const good = Math.abs(v - ys[i]) < 0.15;
+            return `XOR(${x.join(',')}) → <b style="color:${good ? 'var(--ok)' : 'var(--bad)'}">${v.toFixed(3)}</b> (want ${ys[i]})`;
+          }).join('<br>');
+        }
+        function train(n) {
+          let k = 0;
+          const step = () => {
+            for (let i = 0; i < 10; i++) {
+              const loss = net.step(xs, ys, 0.15);
+              history.push(loss.v);
+            }
+            if (!document.getElementById('nn-outs')) return;  // lab closed mid-training
+            drawLoss(); drawMap(); outs();
+            if (++k < n / 10) setTimeout(step, 16);
+            else ULTRON_STORY.toast(history.length && history[history.length - 1] < 0.05 ? 'Loss ' + history[history.length - 1].toFixed(4) + ' — the corners separated. Depth bought geometry.' : 'Loss ' + (history[history.length - 1] || 0).toFixed(4) + ' — keep training (or reset for luckier init)');
+          };
+          step();
+        }
+        $('#nn-100').onclick = () => train(100);
+        $('#nn-1000').onclick = () => train(1000);
+        $('#nn-reset').onclick = () => { net = new NN.MLP([2, 4, 1]); history.length = 0; drawLoss(); drawMap(); outs(); ULTRON_STORY.toast('fresh random weights — gradient descent from a new starting line'); };
+        drawLoss(); drawMap(); outs();
+        main.appendChild(milestones([
+          ['Value with children', 'A number + a list of parents + a backward() that adds local gradients. Start with + and ×.'],
+          ['Backward over a tape', 'Topologically sort (you built this in W12\'s layout), seed the loss with grad 1, walk in reverse. Two nodes deep is enough to verify: check d(x·y)/dx numerically.'],
+          ['Neuron = Σwᵢxᵢ + b, tanh', 'A Layer = matrix of Values; an MLP = stack of layers. ~20 lines with the engine done.'],
+          ['The training loop', 'Loss = Σ (out − target)². backwardAll(), then every parameter: p.v −= lr·p.grad. That is ALL of "learning".'],
+          ['Verify with XOR', 'A single neuron fails forever; 2-4-1 succeeds within a few hundred steps. You have personally demonstrated why depth exists.']
+        ]));
+        main.appendChild(section('Where this goes', `<p style="font-size:13.5px">The engine you built is micrograd in spirit — and micrograd is Karpathy's famous teaching engine precisely because 60 lines IS the whole idea. Real frameworks add tensors (batch the arithmetic), GPUs, and autodiff over huge graphs — but every gradient is still produced by exactly your reverse walk. Attention? More graph. Transformers? More graph. You now have the load-bearing core of modern AI in your hands.</p><p style="font-size:13.5px">Interview angle: derive backprop for a 2-layer net on a whiteboard — it's chain rule + bookkeeping, and you've literally built the bookkeeping.</p>`));
+      }
+    });
+  }
 })();
