@@ -803,9 +803,243 @@
     return { steps, out: a };
   }
 
+  /* ============================================================
+     Graph — ODS §12. BFS/DFS with frontier logs.
+     ============================================================ */
+  class Graph {
+    constructor(n) { this.n = n; this.edges = new Set(); this.log = []; }
+    addEdge(i, j) { if (i !== j) { this.edges.add(i + '-' + j); this.edges.add(j + '-' + i); } this.log.push({ op: 'edge', i, j }); }
+    has(i, j) { return this.edges.has(i + '-' + j); }
+    adj(i) { const out = []; for (let j = 0; j < this.n; j++) if (i !== j && this.has(i, j)) out.push(j); return out; }
+    adjLists() { const out = []; for (let i = 0; i < this.n; i++) out.push(this.adj(i)); return out; }
+    adjMatrix() { const m = []; for (let i = 0; i < this.n; i++) { m.push([]); for (let j = 0; j < this.n; j++) m[i].push(this.has(i, j) ? 1 : 0); } return m; }
+    bfs(s) {
+      const seen = new Array(this.n).fill(false), dist = new Array(this.n).fill(-1);
+      const rounds = []; let frontier = [s]; seen[s] = true; dist[s] = 0;
+      this.log.push({ op: 'visit', v: s, d: 0 });
+      while (frontier.length) {
+        const next = [];
+        for (const v of frontier) for (const w of this.adj(v)) {
+          if (!seen[w]) { seen[w] = true; dist[w] = dist[v] + 1; next.push(w); this.log.push({ op: 'visit', v: w, d: dist[w], via: v }); }
+        }
+        if (next.length) rounds.push(next.slice());
+        frontier = next;
+      }
+      this.log.push({ op: 'rounds', rounds });
+      return { dist, rounds };
+    }
+    dfs(s) {
+      const seen = new Array(this.n).fill(false), order = [], stack = [s];
+      while (stack.length) {
+        const v = stack.pop();
+        if (seen[v]) continue;
+        seen[v] = true; order.push(v);
+        this.log.push({ op: 'visit', v, d: null, deep: true });
+        for (const w of this.adj(v).reverse()) if (!seen[w]) { stack.push(w); this.log.push({ op: 'push', v: w, from: v }); }
+      }
+      return { order };
+    }
+    snapshot() { return { kind: 'graph', n: this.n, edges: [...this.edges] }; }
+  }
+
+  /* ============================================================
+     BinaryTrie — ODS §13.1. Search bit by bit; w=8 for the lab.
+     Leaves form a doubly-linked list in sorted order.
+     ============================================================ */
+  class BinaryTrie {
+    constructor(w) {
+      this.w = w || 8;
+      this.root = { id: nid(), kind: 'internal', child: [null, null] };
+      this.first = null; // leftmost leaf
+      this.n = 0; this.log = [];
+    }
+    find(x) {
+      let node = this.root; const path = [];
+      for (let i = this.w - 1; i >= 0; i--) {
+        if (!node || node.kind === 'leaf') break;   // shallow leaf: path ends early
+        const b = (x >> i) & 1;
+        path.push({ level: this.w - 1 - i, bit: b });
+        node = node.child[b];
+      }
+      if (node && node.kind === 'leaf' && node.x === x) {
+        this.log.push({ op: 'path', x, path, leaf: node.x });
+        return node;
+      }
+      this.log.push({ op: 'path', x, path, dead: true });
+      return null;
+    }
+    add(x) {
+      if (this.n === 0) {
+        const leaf = { id: nid(), kind: 'leaf', x, prev: null, next: null };
+        this.root.child[(x >> (this.w - 1)) & 1] = leaf;
+        this.first = leaf; this.n++;
+        this.log.push({ op: 'add', x, first: true });
+        return true;
+      }
+      // walk x's bits; stop at an empty slot (easy case) or at a leaf
+      let node = this.root;
+      let i = this.w - 1;        // bit index this node consumes
+      let w = null;              // the leaf we ran into
+      let slot = 0;              // where the leaf hangs / where we hang ours
+      while (true) {
+        const b = (x >> i) & 1;
+        const nx = node.child[b];
+        if (!nx) { slot = b; w = null; break; }         // empty slot
+        if (nx.kind === 'leaf') { slot = b; w = nx; break; }
+        node = nx; i--;
+      }
+      const leaf = { id: nid(), kind: 'leaf', x, prev: null, next: null };
+      if (w === null) {
+        // easy: empty slot, hang the leaf directly
+        node.child[slot] = leaf;
+        this.log.push({ op: 'add', x, at: i, slot });
+      } else {
+        if (w.x === x) return false;                      // already present
+        // highest bit where x and w.x differ (must be ≤ i)
+        let j = -1;
+        for (let k = this.w - 1; k >= 0; k--) if (((x ^ w.x) >> k) & 1) { j = k; break; }
+        if (j < 0) return false;
+        // replace leaf w with a chain of internal nodes for the shared
+        // prefix (bits i-1 … j+1), ending in one internal node at bit j
+        // that separates w and the new leaf
+        const chain = { id: nid(), kind: 'internal', child: [null, null] };
+        node.child[slot] = chain;
+        let cur = chain;
+        for (let k = i - 1; k > j; k--) {
+          const nb = (x >> k) & 1; // == (w.x >> k) & 1, shared prefix bit
+          const nxt = { id: nid(), kind: 'internal', child: [null, null] };
+          cur.child[nb] = nxt; cur = nxt;
+        }
+        const jb = (x >> j) & 1;
+        cur.child[jb] = leaf;
+        cur.child[1 - jb] = w;
+        this.log.push({ op: 'split', at: j, old: w.x, x });
+      }
+      // splice into the sorted doubly-linked list of leaves
+      let p = this.first, prev = null;
+      while (p && p.x < x) { prev = p; p = p.next; }
+      leaf.next = p; leaf.prev = prev;
+      if (prev) prev.next = leaf; else this.first = leaf;
+      if (p) p.prev = leaf;
+      this.n++;
+      return true;
+    }
+    size() { return this.n; }
+    remove(x) {
+      if (!this.find(x)) return false;
+      // lab simplification: rebuild without x (ODS §13.1 removes in place
+      // and prunes empty chains; a rebuild is easier to keep provably right)
+      const vals = this.snapshot().leaves.filter(v => v !== x);
+      this.root = { id: nid(), kind: 'internal', child: [null, null] };
+      this.first = null; this.n = 0;
+      vals.forEach(v => this.add(v));
+      this.log.push({ op: 'remove', x });
+      return true;
+    }
+    snapshot() {
+      const nodes = [];
+      const walk = (node, level, pathBits) => {
+        if (!node) return;
+        nodes.push({ id: node.id, kind: node.kind, x: node.x !== undefined ? node.x : null, level, path: pathBits });
+        if (node.kind === 'internal') { walk(node.child[0], level + 1, pathBits + '0'); walk(node.child[1], level + 1, pathBits + '1'); }
+      };
+      walk(this.root, 0, '');
+      const leaves = [];
+      let p = this.first; while (p) { leaves.push(p.x); p = p.next; }
+      return { kind: 'btrie', w: this.w, nodes, leaves };
+    }
+  }
+
+  /* ============================================================
+     BTree — ODS §14.2. Blocks of keys, balanced by construction:
+     splits on the way down (pre-emptive), B-1..2B-2 keys/node.
+     ============================================================ */
+  class BTree {
+    constructor(B) {
+      this.B = B || 3; // max keys per node = 2B-2 (min B-1 except root)
+      this.root = { id: nid(), keys: [], children: [], leaf: true };
+      this.n = 0; this.log = [];
+    }
+    add(x) {
+      const B = this.B;
+      const r = this.root;
+      this.dup = false;
+      if (r.keys.length === 2 * B - 1) { // full root: split pre-emptively
+        const s = { id: nid(), keys: [], children: [r], leaf: false };
+        this.root = s;
+        this.splitChild(s, 0); // pushes median into s.keys, right half into s.children
+        this.log.push({ op: 'rootsplit', up: s.keys[0] });
+        this.insertNonFull(this.root, x);
+      } else this.insertNonFull(r, x);
+      if (!this.dup) this.n++;
+    }
+    splitChild(parent, i) {
+      const B = this.B, y = parent.children[i];
+      const z = { id: nid(), keys: y.keys.slice(B), children: y.children.slice(B), leaf: y.leaf };
+      const up = y.keys[B - 1];
+      y.keys = y.keys.slice(0, B - 1); y.children = y.children.slice(0, B);
+      parent.keys.splice(i, 0, up);
+      parent.children.splice(i + 1, 0, z);
+      this.log.push({ op: 'split', parent: parent.id, child: y.id, new: z.id, up, at: i });
+    }
+    insertNonFull(node, x) {
+      const B = this.B;
+      let cur = node;
+      while (true) {
+        if (cur.keys.includes(x)) { this.dup = true; return; }
+        let i = cur.keys.findIndex(k => k > x);
+        if (i < 0) i = cur.keys.length;
+        if (cur.leaf) { cur.keys.splice(i, 0, x); this.log.push({ op: 'insert', into: cur.id, x, at: i }); return; }
+        if (cur.children[i].keys.length === 2 * B - 1) {
+          this.splitChild(cur, i);
+          if (x === cur.keys[i]) { this.dup = true; return; }
+          if (x > cur.keys[i]) i++;
+        }
+        cur = cur.children[i];
+      }
+    }
+    find(x) {
+      let cur = this.root; const path = [];
+      while (cur) {
+        path.push({ id: cur.id, keys: cur.keys.slice() });
+        let i = cur.keys.findIndex(k => k >= x);
+        if (i >= 0 && cur.keys[i] === x) { this.log.push({ op: 'found', x, block: cur.id, at: i, path }); return { node: cur, i }; }
+        if (cur.leaf) { this.log.push({ op: 'miss', x, path }); return null; }
+        cur = cur.children[i < 0 ? cur.keys.length : i];
+      }
+      return null;
+    }
+    inOrder() {
+      const out = [];
+      const walk = (node) => {
+        if (!node) return;
+        for (let i = 0; i < node.keys.length; i++) { walk(node.children[i]); out.push(node.keys[i]); }
+        walk(node.children[node.keys.length]);
+      };
+      walk(this.root);
+      return out;
+    }
+    size() { return this.n; }
+    snapshot() {
+      const nodes = [];
+      const walk = (node, depth) => {
+        nodes.push({ id: node.id, keys: node.keys.slice(), children: node.children.map(c => c ? c.id : null), leaf: node.leaf, depth });
+        for (const c of node.children) walk(c, depth + 1);
+      };
+      walk(this.root, 0);
+      return { kind: 'btree', nodes, B: this.B };
+    }
+  }
+
   /* ---------- exports (browser + node) ---------- */
   const DS = {
-    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable, BST, Treap, RedBlack, RED, BLACK, BinaryHeap, MeldableHeap, mergeSortSteps, quickSortSteps, heapSortSteps, countingSortSteps, radixSortSteps
+    mulberry32, rng, rint, shuffle,
+    ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList,
+    SkiplistSSet, ChainedHashTable, LinearHashTable, mulHash,
+    BST, Treap, RedBlack, RED, BLACK,
+    BinaryHeap, MeldableHeap,
+    mergeSortSteps, quickSortSteps, heapSortSteps, countingSortSteps, radixSortSteps,
+    Graph, BinaryTrie, BTree
   };
   if (typeof window !== 'undefined') window.ULTRON_DS = DS;
   if (typeof globalThis !== 'undefined') globalThis.ULTRON_DS = DS;
