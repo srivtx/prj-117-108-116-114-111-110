@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Economics and finance from first principles: 12 interactive stations — growth, Markov chains, job search, the Bellman sweep, consumption smoothing, continuous time, wealth distributions, deep equilibrium nets, PINNs, Gaussian processes and climate under deep uncertainty. The QuantEcon catalog and Deep Learning for Dynamic Economic Models, rebuilt as playable machines.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="../learn/lab.css">
+<title>Economics &amp; Finance · ULTRON Lab</title>
+</head>
+<body>
+<div class="app" style="min-height:100%;display:flex;flex-direction:column">
+  <header class="top">
+    <a class="brand" href="../">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <div><h1>ULTRON LAB</h1><p>economics &amp; finance, played by hand</p></div>
+    </a>
+    <nav class="tabs" id="tabs" aria-label="Stations"></nav>
+    <div class="hdr-tools">
+      <a class="nb-btn" href="../">3D worlds</a>
+      <a class="nb-btn" href="../stats/">Stats</a>
+      <a class="nb-btn" href="../arena/">Arena</a>
+      <a class="nb-btn" href="../solves/">Solves</a>
+      <button class="nb-btn" id="nb-btn" aria-label="Open notebook">Notebook <b id="nb-count" class="zero">0</b></button>
+    </div>
+  </header>
+
+  <div class="lab">
+    <div class="stage">
+      <canvas id="gl" hidden></canvas>
+      <canvas id="c2d" style="width:100%;height:100%;display:block"></canvas>
+      <div class="guide" id="guide" hidden></div>
+    </div>
+    <div class="panel">
+      <div class="station">
+        <div>
+          <p class="eyebrow" id="w-eyebrow">Station E01</p>
+          <h2 id="w-title">…</h2>
+          <p class="lede" id="w-lede">…</p>
+        </div>
+        <div class="block" id="w-controls"></div>
+        <div class="stats" id="w-stats" hidden></div>
+        <div>
+          <button class="btn primary story-btn" id="story-btn">▶ Play the guided story</button>
+        </div>
+        <div class="block" id="w-why"><h3>Where this goes in the real world</h3><div id="w-why-body" style="font-size:13px"></div></div>
+        <p class="note">Every station runs its pure, tested core from <code>learn/econ/</code> — the same files the verify suite proves. Curriculum rebuilds the open lectures of QuantEcon and <i>Deep Learning for Solving and Estimating Dynamic Economic Models</i> (links below). Built by <a href="https://github.com/srivtx">@srivtx</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" style="flex:1">
+    <div class="hero">
+      <p class="eyebrow">The source ladder</p>
+      <h2>Twenty sources, one wing — every rung linked</h2>
+      <p class="lede">This wing was built by reading the sources below end to end and rebuilding each idea as a machine you can drive. Stations E01–E08 stand on the QuantEcon lecture catalog; E09–E12 stand on the twelve chapters of <i>Deep Learning for Solving and Estimating Dynamic Economic Models</i>. Read the original, then come back and play.</p>
+    </div>
+    <div class="src-ladder">
+      <a href="https://quantecon.org/lectures/" target="_blank" rel="noopener"><span class="st">QE · catalog</span>The eight-course lecture series</a>
+      <a href="https://intro.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 1 → E01 E02 E03 E04 E05 E06</span>A First Course in Quantitative Economics</a>
+      <a href="https://python.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 2 → E03 E05 E06</span>Intermediate Quantitative Economics</a>
+      <a href="https://python-advanced.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 3 → E05</span>Advanced Quantitative Economics</a>
+      <a href="https://jax.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 4 → E09</span>Quantitative Economics with JAX</a>
+      <a href="https://continuous-time-mcs.quantecon.org/intro.html" target="_blank" rel="noopener"><span class="st">QE 5 → E07</span>Continuous Time Markov Chains</a>
+      <a href="https://julia.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 6</span>Quantitative Economics with Julia</a>
+      <a href="https://datascience.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 7</span>Economic Modeling and Data Science</a>
+      <a href="https://python-programming.quantecon.org/" target="_blank" rel="noopener"><span class="st">QE 8</span>Python Programming for Economics and Finance</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/" target="_blank" rel="noopener"><span class="st">DEQN · book</span>Deep Learning for Solving and Estimating Dynamic Economic Models</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch01-intro" target="_blank" rel="noopener"><span class="st">DEQN 1 → E09</span>Introduction to Machine Learning and Deep Learning</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch02-deqns" target="_blank" rel="noopener"><span class="st">DEQN 2 → E09</span>Deep Equilibrium Nets</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch03-irbc" target="_blank" rel="noopener"><span class="st">DEQN 3 → E09</span>The International Real Business Cycle Model</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch04-nas" target="_blank" rel="noopener"><span class="st">DEQN 4 → E09</span>Neural Architecture Search and Loss Normalization</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch05-olg" target="_blank" rel="noopener"><span class="st">DEQN 5 → E08</span>Overlapping Generations Models with DEQNs</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch06-ha-youngs" target="_blank" rel="noopener"><span class="st">DEQN 6 → E08</span>Heterogeneous Agents and Young's Method</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch07-pinns" target="_blank" rel="noopener"><span class="st">DEQN 7 → E10</span>Physics-Informed Neural Networks</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch08-ctime-ha" target="_blank" rel="noopener"><span class="st">DEQN 8 → E07 E10</span>Heterogeneous Agent Models in Continuous Time</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch09-surrogates-gps" target="_blank" rel="noopener"><span class="st">DEQN 9 → E11</span>Gaussian Processes</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch10-smm" target="_blank" rel="noopener"><span class="st">DEQN 10 → E11</span>Deep Surrogate Models and Structural Estimation</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch11-climate" target="_blank" rel="noopener"><span class="st">DEQN 11 → E12</span>Climate Economics and Deep Uncertainty Quantification</a>
+      <a href="https://sischei.github.io/Deep_Learning_for_Solving_And_Estimating_Dynamic_Economic_Models/ch12-synthesis" target="_blank" rel="noopener"><span class="st">DEQN 12 → E12</span>Synthesis and Outlook</a>
+    </div>
+    <p class="note" style="margin-top:18px">Courses and chapters marked "next rungs" in the ladder above (QE Julia, Data Science, JAX internals) are adjacent material the wing draws on but does not yet rebuild station-by-station — an honest roadmap, not a claim. All sources are open lectures by their authors; this wing is an independent study companion that links and credits them.</p>
+  </div>
+</div>
+
+<div class="nb" id="nb" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../learn/ds.js"></script>
+<script src="../learn/sim3d.js"></script>
+<script src="../learn/story.js"></script>
+<script src="../learn/pure/autograd.js"></script>
+<script src="../learn/econ/money.js"></script>
+<script src="../learn/econ/solow.js"></script>
+<script src="../learn/econ/markov.js"></script>
+<script src="../learn/econ/mcall.js"></script>
+<script src="../learn/econ/valuefn.js"></script>
+<script src="../learn/econ/consume.js"></script>
+<script src="../learn/econ/clock.js"></script>
+<script src="../learn/econ/crowd.js"></script>
+<script src="../learn/econ/deep.js"></script>
+<script src="../learn/econ/pinn.js"></script>
+<script src="../learn/econ/gauss.js"></script>
+<script src="../learn/econ/climate.js"></script>
+<script src="../learn/econ-sims.js"></script>
+<script src="../learn/econ-sims2.js"></script>
+<script src="../learn/econ-stories.js"></script>
+<script>
+/* ============================================================
+   The economics wing shell: tabs, shared canvases, story button.
+   Same DNA as the stats wing.
+   ============================================================ */
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const ECON = window.ULTRON_ECON || [];
+  let current = null, sim = null;
+  const c2d = $('#c2d'), glc = $('#gl');
+
+  const WHY = {
+    e1: 'Annuities price mortgages and pensions; present value values every company. The geometric series is the atom under all of finance.',
+    e2: 'Growth accounting, the convergence debate, and the "why don\'t poor countries just catch up" question all live on this diagram.',
+    e3: 'Credit-rating migrations, employment dynamics, and PageRank — the web\'s ranking is literally a stationary distribution.',
+    e4: 'Search-and-matching macro (the Diamond–Mortensen–Pissarides Nobel) explains unemployment with exactly this stopping problem.',
+    e5: 'Every "solve the model" in macro is this sweep. Bellman equations run robotics, inventory, and RL — the same fixed point.',
+    e6: 'Consumption smoothing is one of the most tested predictions in macro; stimulus design leans on the transitory/permanent split.',
+    e7: 'Queueing, reliability, and arrival processes: server farms and call centers run on exponential clocks and Kolmogorov flows.',
+    e8: 'Inequality research, heterogeneous-agent macro (Auclert–Kaplan–Moll), and the Zero-Inflation debate all start from this mechanism.',
+    e9: 'Deep equilibrium nets (DEQN) solve models with dozens of states — the paper\'s whole program, running in your browser at toy scale.',
+    e10: 'PINNs crack PDEs where data is scarce — climate modules, continuous-time HA models (DEQN ch 8), engineering surrogates.',
+    e11: 'Structural estimation (SMM) and Bayesian optimization: expensive models everywhere are wrapped in exactly this band.',
+    e12: 'The social cost of carbon, the precautionary principle, and climate-policy design under ambiguity — this slider, with real stakes.'
+  };
+
+  const api = {
+    sim3d() {
+      if (!sim) sim = Sim3D.create(glc);
+      glc.hidden = false; c2d.hidden = true;
+      return sim;
+    },
+    canvas2d() { glc.hidden = true; c2d.hidden = false; return c2d; },
+    controls() { const el = $('#w-controls'); el.hidden = false; el.innerHTML = ''; return el; },
+    stats(on) { const el = $('#w-stats'); el.hidden = !on; if (on) el.innerHTML = ''; return el; },
+    statsFn() { if (current && current.statsRefresh) current.statsRefresh(); },
+    toast: m => ULTRON_STORY.toast(m)
+  };
+
+  const tabs = $('#tabs');
+  ECON.forEach((s, idx) => {
+    const b = document.createElement('button');
+    b.dataset.w = s.id; b.setAttribute('role', 'tab');
+    b.innerHTML = `<i>${idx + 1}</i>${s.tab}`;
+    b.onclick = () => select(s.id);
+    tabs.appendChild(b);
+  });
+  ULTRON_STORY.refreshTabs();
+
+  function select(id) {
+    ULTRON_STORY.stop();
+    current = ECON.find(s => s.id === id);
+    tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.w === id ? 'true' : 'false'));
+    $('#w-eyebrow').textContent = 'Station E' + String(ECON.indexOf(current) + 1).padStart(2, '0');
+    $('#w-title').textContent = current.title;
+    $('#w-lede').innerHTML = current.lede;
+    $('#w-controls').hidden = true; $('#w-stats').hidden = true;
+    if (sim) { sim.player.pause(); sim.player.tickFn = null; sim.clearFrames(); sim.clearPicks(); sim.clearAll(); }
+    current.mount(api);
+    if (current.statsRefresh) current.statsRefresh();
+    $('#w-why-body').innerHTML = WHY[current.id] || 'Every station connects to the next: same mathematics, new clothes.';
+  }
+  window.ULTRON_SELECT_ECON = select;
+  $('#story-btn').onclick = () => { if (current && current.story) ULTRON_STORY.start(current.id, current.story()); };
+  $('#nb-btn').onclick = () => ULTRON_STORY.open();
+
+  ECON_STORIES.attach(window.ULTRON_ECON);
+  select(ECON.length ? ECON[0].id : null);
+})();
+</script>
+</body>
+</html>
