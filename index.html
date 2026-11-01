@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="ULTRON Lab: every data structure of Open Data Structures as an interactive 3D world you play by hand before the algorithm runs. First principles, no shortcuts.">
+<meta property="og:title" content="ULTRON Lab">
+<meta property="og:description" content="Data structures, algorithms & systems from first principles — 12 interactive 3D worlds, build-your-own-X labs, probability worlds and an interview arena.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="learn/lab.css">
+<title>ULTRON Lab · data structures from first principles</title>
+</head>
+<body>
+<div class="app" style="height:100%;display:flex;flex-direction:column">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <div>
+        <h1>ULTRON LAB</h1>
+        <p>117·108·116·114·111·110 — data structures &amp; algorithms from first principles</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Worlds"></nav>
+    <div class="hdr-tools">
+      <a class="nb-btn" href="build/" title="Build your own git, vim, database, calculator, renderer, framework, neural net…">Build X</a>
+      <a class="nb-btn" href="stats/" title="Probability and statistics, simulated first">Stats</a>
+      <a class="nb-btn" href="arena/" title="Interview questions: LeetCode, Codeforces and big-tech classics, mapped to the worlds">Arena</a>
+      <button class="nb-btn" id="nb-btn" aria-label="Open notebook">Notebook <b id="nb-count" class="zero">0</b></button>
+    </div>
+  </header>
+
+  <div class="lab">
+    <div class="stage">
+      <canvas id="gl"></canvas>
+      <div class="legend" id="legend" hidden></div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="guide" id="guide" hidden></div>
+      <div class="onboard" id="onboard" hidden>
+        <div class="card">
+          <span class="eyebrow">First time here?</span>
+          <h2>Learn it by playing it</h2>
+          <p class="note" style="margin-top:6px">A lab for people who don't accept "it just works":</p>
+          <ol>
+            <li><b>Play it by hand.</b> Before any algorithm runs, you do its job yourself — move the block, probe the slot, follow the pointer.</li>
+            <li><b>Predict, then watch.</b> Lock in a guess, then the world runs and grades you against <i>your own run</i>.</li>
+            <li><b>Ask "why this design?"</b> Every world ends with the trade-offs: why this structure and not another.</li>
+            <li><b>Collect ideas.</b> Terms land in your notebook only after you've seen the thing happen.</li>
+          </ol>
+          <div class="btns"><button class="btn primary" id="onboard-go">Enter the lab</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="station" id="station">
+        <div>
+          <p class="eyebrow" id="w-eyebrow">World 1</p>
+          <h2 id="w-title">…</h2>
+          <p class="lede" id="w-lede">…</p>
+        </div>
+        <div class="block" id="w-controls" hidden></div>
+        <div class="stats" id="w-stats" hidden></div>
+        <div class="block" id="w-timebar" hidden>
+          <h3>Time</h3>
+          <div class="timebar">
+            <button class="btn" id="tb-play">▶</button>
+            <button class="btn" id="tb-step">Step ▸</button>
+            <button class="btn" id="tb-reset">⟲</button>
+            <div class="seg" id="tb-speed">
+              <button data-r="0.25">¼×</button><button data-r="0.5">½×</button><button data-r="1" aria-pressed="true">1×</button><button data-r="3">3×</button>
+            </div>
+            <span class="tickcount" id="tb-tick">tick 0</span>
+          </div>
+        </div>
+        <div>
+          <button class="btn primary story-btn" id="story-btn">▶ Play the guided story</button>
+        </div>
+        <div class="block" id="w-why" hidden>
+          <h3>Why this design?</h3>
+          <div id="w-why-body" style="font-size:13px"></div>
+        </div>
+        <div class="block" id="w-arena" hidden>
+          <h3>In the arena</h3>
+          <div id="w-arena-body" style="font-size:13px"></div>
+        </div>
+        <p class="note">Drag to spin, scroll to zoom, tap blocks to interact. Arrow keys move through a story.
+        Curriculum follows <i>Open Data Structures</i> (Pat Morin, CC BY). Built by <a href="https://github.com/srivtx">@srivtx</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nb" id="nb" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="learn/ds.js"></script>
+<script src="learn/sim3d.js"></script>
+<script src="learn/story.js"></script>
+<script src="learn/worlds/w01-growth.js"></script>
+<script src="learn/worlds/w02-arrays.js"></script>
+<script src="learn/worlds/w03-chains.js"></script>
+<script src="learn/worlds/w04-skiplists.js"></script>
+<script src="learn/worlds/w05-hashing.js"></script>
+<script src="learn/worlds/w06-trees.js"></script>
+<script src="learn/worlds/w07-balance.js"></script>
+<script src="learn/worlds/w08-heaps.js"></script>
+<script src="learn/worlds/w09-sorting.js"></script>
+<script src="learn/worlds/w10-graphs.js"></script>
+<script src="learn/worlds/w11-tries.js"></script>
+<script src="learn/worlds/w12-btrees.js"></script>
+<script>
+/* ============================================================
+   Hub: tabs, one shared sim, world mounting, story button.
+   ============================================================ */
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const sim = Sim3D.create($('#gl'));
+  window.ULTRON_SIM = sim; // for debugging
+  const WORLDS = window.ULTRON_WORLDS || [];
+  let current = null, currentApi = null;
+
+  const api = {
+    sim,
+    legend(html) { const el = $('#legend'); if (!html) { el.hidden = true; return; } el.hidden = false; el.innerHTML = html; },
+    hint(text) { const el = $('#hint'); if (!text) { el.hidden = true; return; } el.hidden = false; el.innerHTML = text; },
+    controls() { const el = $('#w-controls'); el.hidden = false; el.innerHTML = ''; return el; },
+    stats(on) { const el = $('#w-stats'); el.hidden = !on; if (on) el.innerHTML = ''; return el; },
+    why(html) { const el = $('#w-why'); if (!html) { el.hidden = true; return; } el.hidden = false; $('#w-why-body').innerHTML = html; },
+    arena(html) { const el = $('#w-arena'); if (!html) { el.hidden = true; return; } el.hidden = false; $('#w-arena-body').innerHTML = html; },
+    timebar(opts) {
+      const el = $('#w-timebar'); el.hidden = false;
+      let tick = 0;
+      $('#tb-play').textContent = '▶';
+      $('#tb-play').onclick = () => { opts.toggle(); $('#tb-play').textContent = opts.running() ? '❚❚' : '▶'; };
+      $('#tb-step').onclick = () => { opts.step(); $('#tb-tick').textContent = 'tick ' + (++tick); };
+      $('#tb-reset').onclick = () => { tick = 0; opts.reset(); $('#tb-tick').textContent = 'tick 0'; $('#tb-play').textContent = '▶'; };
+      $('#tb-speed').querySelectorAll('button').forEach(b => b.onclick = () => {
+        $('#tb-speed').querySelectorAll('button').forEach(x => x.removeAttribute('aria-pressed'));
+        b.setAttribute('aria-pressed', 'true');
+        opts.speed(parseFloat(b.dataset.r));
+      });
+    },
+    toast: msg => ULTRON_STORY.toast(msg)
+  };
+
+  /* tabs */
+  const tabs = $('#tabs');
+  WORLDS.forEach((w, idx) => {
+    const b = document.createElement('button');
+    b.dataset.w = w.id;
+    b.setAttribute('role', 'tab');
+    b.innerHTML = `<i>${idx + 1}</i>${w.tab}`;
+    b.onclick = () => select(w.id);
+    tabs.appendChild(b);
+  });
+  ULTRON_STORY.refreshTabs();
+
+  function select(id) {
+    if (current && current.unmount) current.unmount();
+    ULTRON_STORY.stop();
+    current = WORLDS.find(w => w.id === id);
+    tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.w === id ? 'true' : 'false'));
+    $('#w-eyebrow').textContent = 'World ' + (WORLDS.indexOf(current) + 1) + (current.book ? ' · ODS ' + current.book : '');
+    $('#w-title').textContent = current.title;
+    $('#w-lede').innerHTML = current.lede;
+    $('#w-controls').hidden = true; $('#w-stats').hidden = true; $('#w-timebar').hidden = true;
+    $('#w-why').hidden = true; $('#w-arena').hidden = true; $('#legend').hidden = true; $('#hint').hidden = true;
+    sim.player.pause(); sim.player.tickFn = null; sim.clearFrames(); sim.clearPicks();
+    sim.clearAll();
+    current.mount(api);
+  }
+  window.ULTRON_SELECT = select;
+
+  $('#story-btn').onclick = () => { if (current && current.story) ULTRON_STORY.start(current.id, current.story()); };
+  $('#nb-btn').onclick = () => ULTRON_STORY.open();
+
+  /* onboarding: first visit only */
+  const seen = (() => { try { return localStorage.getItem('ultron-seen'); } catch (e) { return 'x'; } })();
+  if (!seen) {
+    $('#onboard').hidden = false;
+    $('#onboard-go').onclick = () => {
+      $('#onboard').hidden = true;
+      try { localStorage.setItem('ultron-seen', '1'); } catch (e) { }
+    };
+  }
+
+  select(WORLDS.length ? WORLDS[0].id : null);
+})();
+</script>
+</body>
+</html>
