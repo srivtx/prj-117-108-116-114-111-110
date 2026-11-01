@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Build your own everything: a calculator, git, vim, a database with a B-tree index, a math engine, a ray tracer, a reactive framework, and a neural network with real backprop. Working code, no libraries.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="../learn/lab.css">
+<title>Build your own X · ULTRON Lab</title>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <div><h1>ULTRON LAB</h1><p>build your own everything</p></div>
+  </a>
+  <nav class="tabs" id="tabs" aria-label="Builds"></nav>
+  <div class="hdr-tools">
+    <a class="nb-btn" href="../">3D worlds</a>
+    <a class="nb-btn" href="../stats/">Stats</a>
+    <a class="nb-btn" href="../arena/">Arena</a>
+  </div>
+</header>
+<div class="page">
+  <div class="hero" id="hero">
+    <p class="eyebrow">The build track</p>
+    <h2>Build your own everything</h2>
+    <p class="lede">Eight things people use daily and rarely open: a calculator, git, vim, a database, a math engine, a ray tracer, a UI framework, a neural network. Every lab here is a <b>real working implementation</b> — the same pure JavaScript cores that the project's verify script tests in node — with the first-principles reasoning next to every moving part. <em>Use it, then understand it, then rebuild it.</em></p>
+  </div>
+  <div class="cardgrid" id="menu"></div>
+  <div id="lab" hidden>
+    <div class="crumbs"><a href="#" id="crumb-back">← all builds</a> <b id="crumb-name"></b></div>
+    <div class="hero" style="margin-top:8px">
+      <p class="eyebrow" id="l-eyebrow">Build</p>
+      <h2 id="l-title" style="font-size:26px"></h2>
+      <p class="lede" id="l-lede"></p>
+    </div>
+    <div id="l-body"></div>
+  </div>
+</div>
+<footer class="foot">ULTRON LAB · build track · every core in <code>learn/pure/</code> is unit-tested by <code>tools/verify.mjs</code> · built by <a href="https://github.com/srivtx">@srivtx</a></footer>
+
+<script src="../learn/ds.js"></script>
+<script src="../learn/story.js"></script>
+<script src="../learn/pure/sha256.js"></script>
+<script src="../learn/pure/gitstore.js"></script>
+<script src="../learn/pure/parser.js"></script>
+<script src="../learn/pure/linalg.js"></script>
+<script src="../learn/pure/autograd.js"></script>
+<script src="../learn/pure/signals.js"></script>
+<script src="../learn/pure/vimcore.js"></script>
+<script src="../learn/pure/dbstore.js"></script>
+<script src="../learn/build-labs.js"></script>
+<script src="../learn/build-labs2.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const BUILDS = [...(window.ULTRON_BUILDS || []), ...(window.ULTRON_BUILDS2 || [])];
+  const menu = $('#menu');
+  BUILDS.forEach((b, i) => {
+    const card = document.createElement('a');
+    card.className = 'tcard'; card.href = '#' + b.id;
+    card.innerHTML = `<span class="k">Build ${i + 1} · ~${b.minutes} min</span><h3>${b.title}</h3><p>${b.lede.replace(/<[^>]+>/g, m => m === '<em>' || m === '</em>' ? '' : ' ').slice(0, 130)}…</p>
+      <div class="foot"><span class="tag">pure JS</span><span class="tag">no libraries</span><span class="tag">tested core</span></div>`;
+    menu.appendChild(card);
+  });
+  function open(id) {
+    const b = BUILDS.find(x => x.id === id);
+    if (!b) { $('#menu').hidden = false; $('#hero').hidden = false; $('#lab').hidden = true; return; }
+    $('#menu').hidden = true; $('#hero').hidden = true; $('#lab').hidden = false;
+    $('#l-eyebrow').textContent = 'Build ' + (BUILDS.indexOf(b) + 1) + ' · ~' + b.minutes + ' minutes';
+    $('#l-title').textContent = b.title;
+    $('#l-lede').innerHTML = b.lede;
+    $('#crumb-name').textContent = b.title;
+    const body = $('#l-body'); body.innerHTML = '';
+    b.render(body);
+    window.scrollTo(0, 0);
+  }
+  $('#crumb-back').onclick = e => { e.preventDefault(); history.replaceState(null, '', '#'); open(null); };
+  window.addEventListener('hashchange', () => open(location.hash.slice(1)));
+  if (location.hash.length > 1) open(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>
