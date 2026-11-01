@@ -259,9 +259,178 @@
     }
   }
 
+  /* ============================================================
+     SkiplistSSet — ODS §4. Coin flips build express lanes.
+     ============================================================ */
+  class SkiplistSSet {
+    constructor(seed) {
+      this.rnd = mulberry32(seed === undefined ? (Date.now() & 0xffff) : seed);
+      this.sentinel = { id: nid(), x: -Infinity, next: [] };
+      this.h = 0; this.n = 0; this.log = [];
+    }
+    pickHeight() {
+      let z = this.rnd(), h = 0, flips = [];
+      while (z > 0.5) { h++; z = this.rnd(); flips.push(1); }
+      flips.push(0);
+      this.log.push({ op: 'coin', flips, h });
+      return h + 1;
+    }
+    findPred(x) { // returns the node just before where x belongs, per level; logs path
+      let u = this.sentinel; const path = [];
+      for (let r = this.h - 1; r >= 0; r--) {
+        while (u.next[r] !== undefined && u.next[r] !== null && u.next[r].x < x) { u = u.next[r]; path.push({ id: u.id, x: u.x, r }); }
+        path.push({ at: u.id, r, stop: true });
+      }
+      this.log.push({ op: 'path', path });
+      return u;
+    }
+    find(x) {
+      const u = this.findPred(x);
+      const nx = u.next[0];
+      return nx && nx.x !== undefined && nx.x >= x ? nx : null;
+    }
+    add(x) {
+      const u = this.findPred(x);
+      const nx = u.next[0];
+      if (nx && nx.x === x) return false;
+      const w = { id: nid(), x, next: [] };
+      const k = this.pickHeight();
+      while (this.h < k) { this.sentinel.next[this.h] = null; this.h++; this.log.push({ op: 'lane', level: this.h - 1 }); }
+      for (let r = 0; r < k; r++) {
+        // walk from top again per level (simple version of ODS findPred per level)
+        let v = this.sentinel;
+        for (let r2 = this.h - 1; r2 >= r; r2--) { while (v.next[r2] && v.next[r2].x < x) v = v.next[r2]; }
+        w.next[r] = v.next[r] || null; v.next[r] = w;
+      }
+      this.n++;
+      this.log.push({ op: 'add', id: w.id, x, h: k });
+      return true;
+    }
+    remove(x) {
+      let u = this.sentinel; let target = null;
+      for (let r = this.h - 1; r >= 0; r--) {
+        while (u.next[r] && u.next[r].x < x) u = u.next[r];
+        if (u.next[r] && u.next[r].x === x) { target = u.next[r]; u.next[r] = target.next[r] || null; }
+      }
+      if (!target) return false;
+      while (this.h > 1 && this.sentinel.next[this.h - 1] === null) { this.h--; this.log.push({ op: 'droplane', level: this.h }); }
+      this.n--;
+      this.log.push({ op: 'remove', id: target.id, x });
+      return true;
+    }
+    size() { return this.n; }
+    snapshot() {
+      const nodes = [];
+      let p = this.sentinel.next[0];
+      while (p) { nodes.push({ id: p.id, x: p.x, h: p.next.length }); p = p.next[0]; }
+      return { kind: 'skiplist', nodes, h: this.h };
+    }
+  }
+
+  /* ============================================================
+     Hashing — ODS §5. Multiplicative hashing (BigInt for exact
+     32-bit math), chaining and linear probing.
+     ============================================================ */
+  function mulHash(z, x, d) {
+    const big = (BigInt(z) * BigInt(x >>> 0)) & 0xFFFFFFFFn;
+    return Number(big >> BigInt(32 - d));
+  }
+  class ChainedHashTable {
+    constructor(d, seed) {
+      const rnd = mulberry32(seed === undefined ? 0xabc : seed);
+      this.d = d || 4; this.z = 0;
+      while (this.z % 2 === 0) this.z = Math.floor(rnd() * 4294967295) | 1;
+      this.t = Array.from({ length: 1 << this.d }, () => []);
+      this.n = 0; this.log = [];
+    }
+    hash(x) { const h = mulHash(this.z, x | 0, this.d); this.log.push({ op: 'hash', x, h }); return h; }
+    add(x) {
+      const h = this.hash(x);
+      if (this.t[h].some(e => e.x === x)) { this.log.push({ op: 'dup', x, h }); return false; }
+      const e = { id: nid(), x }; this.t[h].push(e); this.n++;
+      this.log.push({ op: 'chain', id: e.id, x, h, len: this.t[h].length, cost: this.t[h].length });
+      if (this.n > this.t.length) this.grow();
+      return true;
+    }
+    grow() {
+      this.d++; const old = this.t;
+      this.t = Array.from({ length: 1 << this.d }, () => []);
+      this.log.push({ op: 'rehash', from: old.length, to: this.t.length });
+      for (const b of old) for (const e of b) this.t[this.hash(e.x)].push(e);
+    }
+    find(x) {
+      const h = this.hash(x);
+      const i = this.t[h].findIndex(e => e.x === x);
+      this.log.push({ op: 'find', x, h, i, cost: i < 0 ? this.t[h].length : i + 1 });
+      return i < 0 ? null : this.t[h][i].x;
+    }
+    remove(x) {
+      const h = this.hash(x);
+      const i = this.t[h].findIndex(e => e.x === x);
+      if (i < 0) return null;
+      const [e] = this.t[h].splice(i, 1); this.n--;
+      this.log.push({ op: 'remove', id: e.id, x, h });
+      return x;
+    }
+    size() { return this.n; }
+    snapshot() { return { kind: 'chainedhash', buckets: this.t.map(b => b.map(e => ({ id: e.id, x: e.x }))), d: this.d, z: this.z }; }
+  }
+
+  class LinearHashTable {
+    constructor(d, seed) {
+      const rnd = mulberry32(seed === undefined ? 0xabc : seed);
+      this.d = d || 4; this.z = 0;
+      while (this.z % 2 === 0) this.z = Math.floor(rnd() * 4294967295) | 1;
+      this.t = new Array(1 << this.d).fill(null); // null | {id,x} | 'DEL'
+      this.n = 0; this.q = 0; this.log = [];
+    }
+    hash(x) { return mulHash(this.z, x | 0, this.d); }
+    add(x) {
+      if (this.find(x) !== null) return false;
+      if (this.q === this.t.length) this.grow();
+      let i = this.hash(x), probe = 0;
+      while (this.t[i] !== null && this.t[i] !== 'DEL') { i = (i + 1) % this.t.length; probe++; }
+      const e = { id: nid(), x };
+      if (this.t[i] === null) this.q++;
+      this.t[i] = e; this.n++;
+      this.log.push({ op: 'probe', x, start: this.hash(x), at: i, probe, cost: probe + 1 });
+      return true;
+    }
+    find(x) {
+      let i = this.hash(x), probe = 0;
+      while (this.t[i] !== null) {
+        if (this.t[i] !== 'DEL' && this.t[i].x === x) { this.log.push({ op: 'hit', x, at: i, probe }); return x; }
+        i = (i + 1) % this.t.length; probe++;
+        if (probe > this.t.length) break;
+      }
+      this.log.push({ op: 'miss', x, start: this.hash(x), probe, cost: probe + 1 });
+      return null;
+    }
+    remove(x) {
+      let i = this.hash(x), probe = 0;
+      while (this.t[i] !== null) {
+        if (this.t[i] !== 'DEL' && this.t[i].x === x) {
+          this.t[i] = 'DEL'; this.n--; this.log.push({ op: 'tomb', x, at: i, probe });
+          return x;
+        }
+        i = (i + 1) % this.t.length; probe++;
+        if (probe > this.t.length) break;
+      }
+      return null;
+    }
+    grow() { // rehash doubles size, drops tombstones
+      const old = this.t;
+      this.d++; this.t = new Array(1 << this.d).fill(null); this.q = this.n;
+      this.log.push({ op: 'rehash', from: old.length, to: this.t.length });
+      for (const e of old) if (e && e !== 'DEL') { let i = this.hash(e.x); while (this.t[i] !== null) i = (i + 1) % this.t.length; this.t[i] = e; }
+    }
+    size() { return this.n; }
+    snapshot() { return { kind: 'linearhash', slots: this.t.map(s => s === null ? null : s === 'DEL' ? 'DEL' : { id: s.id, x: s.x }), d: this.d }; }
+  }
+
   /* ---------- exports (browser + node) ---------- */
   const DS = {
-    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList
+    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable
   };
   if (typeof window !== 'undefined') window.ULTRON_DS = DS;
   if (typeof globalThis !== 'undefined') globalThis.ULTRON_DS = DS;
