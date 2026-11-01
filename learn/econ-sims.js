@@ -98,11 +98,13 @@
       statsRefresh() {
         const el = api.stats(true); if (!el) return;
         const M = window.ULTRON_MONEY;
-        const g = M.geomSum(st.principal, st.rate / 100, st.years);
-        const d = M.doubling(st.rate / 100);
-        el.innerHTML = `<div><span>final value</span><b>${g.value.toFixed(0)}</b></div>
-          <div><span>simple interest would say</span><b>${(st.principal * (1 + st.rate / 100 * st.years)).toFixed(0)}</b></div>
-          <div><span>compounding bonus</span><b>${(g.value - st.principal * (1 + st.rate / 100 * st.years)).toFixed(0)}</b></div>
+        const r = st.rate / 100;
+        const final = st.principal * Math.pow(1 + r, st.years);       /* the terminal value */
+        const simple = st.principal * (1 + r * st.years);
+        const d = M.doubling(r);
+        el.innerHTML = `<div><span>final value</span><b>${final.toFixed(0)}</b></div>
+          <div><span>simple interest would say</span><b>${simple.toFixed(0)}</b></div>
+          <div><span>compounding bonus</span><b>${(final - simple).toFixed(0)}</b></div>
           <div><span>doubling time</span><b>${d.exact.toFixed(1)}y</b></div>`;
       },
       state: st
