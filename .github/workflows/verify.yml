@@ -2,9 +2,7 @@ name: verify
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -15,5 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Verify everything (structures, build cores, arena solutions)
+      - name: Verify everything (structures, build cores, arena solutions, econ cores, walkthroughs)
         run: node tools/verify.mjs
