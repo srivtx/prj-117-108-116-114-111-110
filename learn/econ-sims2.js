@@ -476,7 +476,7 @@
     window.ULTRON_ECON.push({
       id: 'e12', tab: 'Climate', kind: '2d',
       title: 'The fog ahead — climate under deep uncertainty',
-      lede: 'A one-box climate answers emissions with warming; damages answer warming. The catch: nobody knows the planet's sensitivity λ or the damage coefficient a — only ranges. This is the synthesis station: growth (E02), decisions (E05), learning (E09) and now uncertainty that will not resolve in time. Watch which part of the distribution sets policy.',
+      lede: 'A one-box climate answers emissions with warming; damages answer warming. The catch: nobody knows the sensitivity λ or the damage coefficient a — only ranges. This is the synthesis station: growth (E02), decisions (E05), learning (E09) and now uncertainty that will not resolve in time. Watch which part of the distribution sets policy.',
       mount(a) {
         api = a; cv = a.canvas2d(); draw = chart(cv);
         const CL = window.ULTRON_CLIMATE;
