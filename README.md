@@ -2,7 +2,7 @@
 
 **Learn data structures and algorithms by playing them, building them, and being quizzed on them.** The full curriculum of Pat Morin's *[Open Data Structures](http://opendatastructures.org)* (CC BY), rebuilt as 12 interactive 3D worlds — plus a **build-your-own-everything** track (git, vim, a database, a ray tracer, a neural net…), a **probability & statistics** wing, and an **interview arena** wired to the classic questions.
 
-**Live:** https://srivtx.github.io/prj-117-108-116-114-111-110/ · **Verified:** `node tools/verify.mjs` → 78 checks, 0 failures, run on every push.
+[![verify](https://github.com/srivtx/prj-117-108-116-114-111-110/actions/workflows/verify.yml/badge.svg)](https://github.com/srivtx/prj-117-108-116-114-111-110/actions/workflows/verify.yml) **Live:** https://srivtx.github.io/prj-117-108-116-114-111-110/ · **Verified:** `node tools/verify.mjs` → 79 checks, 0 failures, run on every push.
 
 *(The repo name decodes itself: 117·108·116·114·111·110 are the ASCII codes of U-L-T-R-O-N.)*
 
