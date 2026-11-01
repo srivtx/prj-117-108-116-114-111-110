@@ -621,9 +621,191 @@
     size() { return this.n; }
   }
 
+  /* ============================================================
+     Heaps — ODS §10. BinaryHeap (implicit tree in an array) and
+     MeldableHeap (randomized merge).
+     ============================================================ */
+  class BinaryHeap {
+    constructor() { this.a = []; this.log = []; }
+    add(x) {
+      this.a.push(x);
+      let i = this.a.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (this.a[p] <= this.a[i]) break;
+        [this.a[p], this.a[i]] = [this.a[i], this.a[p]];
+        this.log.push({ op: 'swapUp', i, p, cost: 1 });
+        i = p;
+      }
+      this.log.push({ op: 'add', x, at: i });
+    }
+    removeMin() {
+      if (!this.a.length) throw new RangeError('empty');
+      const x = this.a[0];
+      const last = this.a.pop();
+      if (this.a.length) {
+        this.a[0] = last;
+        let i = 0;
+        while (true) {
+          const l = 2 * i + 1, r = l + 1; let m = i;
+          if (l < this.a.length && this.a[l] < this.a[m]) m = l;
+          if (r < this.a.length && this.a[r] < this.a[m]) m = r;
+          if (m === i) break;
+          [this.a[i], this.a[m]] = [this.a[m], this.a[i]];
+          this.log.push({ op: 'swapDown', i, m, cost: 1 });
+          i = m;
+        }
+      }
+      this.log.push({ op: 'removeMin', x });
+      return x;
+    }
+    static heapify(arr) { // O(n) build — ODS exercise, used by heapsort
+      const h = new BinaryHeap(); h.a = arr.slice();
+      for (let i = (h.a.length >> 1) - 1; i >= 0; i--) h.siftDownFrom(i, true);
+      return h;
+    }
+    siftDownFrom(i, quiet) {
+      while (true) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < this.a.length && this.a[l] < this.a[m]) m = l;
+        if (r < this.a.length && this.a[r] < this.a[m]) m = r;
+        if (m === i) break;
+        [this.a[i], this.a[m]] = [this.a[m], this.a[i]];
+        this.log.push({ op: 'swapDown', i, m, cost: 1 });
+        i = m;
+      }
+    }
+    size() { return this.a.length; }
+    snapshot() { return { kind: 'binheap', items: this.a.slice() }; }
+  }
+
+  class MeldableHeap {
+    constructor(seed) { this.rnd = mulberry32(seed === undefined ? 0xbee : seed); this.r = null; this.n = 0; this.log = []; }
+    merge(h1, h2) {
+      if (!h1) return h2;
+      if (!h2) return h1;
+      if (h2.x < h1.x) { const t = h1; h1 = h2; h2 = t; this.log.push({ op: 'swapRoles', a: h1.id, b: h2.id }); }
+      h1.right = this.merge(h1.right, h2);
+      if (this.rnd() < 0.5) { const t = h1.left; h1.left = h1.right; h1.right = t; this.log.push({ op: 'coinSwap', at: h1.id }); }
+      return h1;
+    }
+    add(x) { const u = { id: nid(), x, left: null, right: null }; this.r = this.merge(this.r, u); this.n++; this.log.push({ op: 'add', id: u.id, x }); }
+    removeMin() { if (!this.r) throw new RangeError('empty'); const x = this.r.x; this.r = this.merge(this.r.left, this.r.right); this.n--; this.log.push({ op: 'removeMin', x }); return x; }
+    size() { return this.n; }
+  }
+
+  /* ============================================================
+     Sorting — ODS §11 as step scripts the 3D world replays.
+     Step kinds: cmp, swap, set, mark, done, aux
+     ============================================================ */
+  function mergeSortSteps(input) {
+    const a = input.slice(), steps = [];
+    const aux = (lo, hi) => { // sort [lo,hi)
+      if (hi - lo <= 1) return;
+      const mid = (lo + hi) >> 1;
+      aux(lo, mid); aux(mid, hi);
+      const tmp = [];
+      let i = lo, j = mid;
+      while (i < mid && j < hi) {
+        steps.push({ t: 'cmp', i, j });
+        if (a[i] <= a[j]) tmp.push(a[i++]); else tmp.push(a[j++]);
+      }
+      while (i < mid) tmp.push(a[i++]);
+      while (j < hi) tmp.push(a[j++]);
+      for (let k = 0; k < tmp.length; k++) { a[lo + k] = tmp[k]; steps.push({ t: 'set', i: lo + k, v: tmp[k] }); }
+    };
+    aux(0, a.length);
+    steps.push({ t: 'done' });
+    return { steps, out: a };
+  }
+
+  function quickSortSteps(input, pivotMode) {
+    const a = input.slice(), steps = [];
+    const pick = (lo, hi) => {
+      if (pivotMode === 'first') return lo;
+      if (pivotMode === 'last') return hi - 1;
+      return lo + Math.floor((hi - lo) / 2); // middle (avoid worst case for sorted demo... but story wants worst case)
+    };
+    const qs = (lo, hi) => { // sort [lo,hi)
+      if (hi - lo <= 1) return;
+      const p = pick(lo, hi);
+      steps.push({ t: 'mark', i: p, kind: 'pivot' });
+      const pv = a[p];
+      // Lomuto with pivot moved to end
+      [a[p], a[hi - 1]] = [a[hi - 1], a[p]];
+      steps.push({ t: 'swap', i: p, j: hi - 1 });
+      let store = lo;
+      for (let k = lo; k < hi - 1; k++) {
+        steps.push({ t: 'cmp', i: k, j: hi - 1 });
+        if (a[k] < pv) { if (k !== store) { [a[k], a[store]] = [a[store], a[k]]; steps.push({ t: 'swap', i: k, j: store }); } store++; }
+      }
+      [a[store], a[hi - 1]] = [a[hi - 1], a[store]];
+      steps.push({ t: 'swap', i: store, j: hi - 1 });
+      steps.push({ t: 'mark', i: store, kind: 'placed' });
+      qs(lo, store); qs(store + 1, hi);
+    };
+    qs(0, a.length);
+    steps.push({ t: 'done' });
+    return { steps, out: a };
+  }
+
+  function heapSortSteps(input) {
+    const a = input.slice(), steps = [];
+    const sift = (i, size) => {
+      while (true) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < size) { steps.push({ t: 'cmp', i: l, j: m }); if (a[l] > a[m]) m = l; }
+        if (r < size) { steps.push({ t: 'cmp', i: r, j: m }); if (a[r] > a[m]) m = r; }
+        if (m === i) break;
+        [a[i], a[m]] = [a[m], a[i]]; steps.push({ t: 'swap', i, j: m });
+        i = m;
+      }
+    };
+    for (let i = (a.length >> 1) - 1; i >= 0; i--) sift(i, a.length);
+    for (let end = a.length - 1; end > 0; end--) {
+      [a[0], a[end]] = [a[end], a[0]]; steps.push({ t: 'swap', i: 0, j: end });
+      steps.push({ t: 'mark', i: end, kind: 'placed' });
+      sift(0, end);
+    }
+    steps.push({ t: 'mark', i: 0, kind: 'placed' });
+    steps.push({ t: 'done' });
+    return { steps, out: a }; // max-heap build + extract-largest-to-end → ascending
+  }
+
+  function countingSortSteps(input, kmax) {
+    const a = input.slice(), steps = [];
+    const k = kmax || Math.max(...a, 1);
+    const c = new Array(k + 1).fill(0);
+    for (const v of a) { c[v]++; steps.push({ t: 'count', d: v }); }
+    let s = 0;
+    for (let i = 0; i <= k; i++) { const t = c[i]; c[i] = s; s += t; }
+    const out = new Array(a.length);
+    for (let i = 0; i < a.length; i++) { const p = c[a[i]]++; out[p] = a[i]; steps.push({ t: 'place', from: i, to: p, v: a[i] }); }
+    steps.push({ t: 'done' });
+    return { steps, out };
+  }
+
+  function radixSortSteps(input, r) {
+    // LSD radix, base 2^r, values as non-negative ints
+    const a = input.slice(), steps = [];
+    const base = 1 << r, mask = base - 1;
+    const maxv = Math.max(...a, 0);
+    let shift = 0, pass = 0;
+    while (((maxv >> shift) | 0) > 0) {
+      steps.push({ t: 'pass', pass, shift });
+      const buckets = Array.from({ length: base }, () => []);
+      for (const v of a) { const d = (v >> shift) & mask; buckets[d].push(v); steps.push({ t: 'bucket', v, d, pass }); }
+      let i = 0;
+      for (const b of buckets) for (const v of b) { a[i++] = v; steps.push({ t: 'set', i: i - 1, v, pass }); }
+      shift += r; pass++;
+    }
+    steps.push({ t: 'done' });
+    return { steps, out: a };
+  }
+
   /* ---------- exports (browser + node) ---------- */
   const DS = {
-    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable, BST, Treap, RedBlack, RED, BLACK
+    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable, BST, Treap, RedBlack, RED, BLACK, BinaryHeap, MeldableHeap, mergeSortSteps, quickSortSteps, heapSortSteps, countingSortSteps, radixSortSteps
   };
   if (typeof window !== 'undefined') window.ULTRON_DS = DS;
   if (typeof globalThis !== 'undefined') globalThis.ULTRON_DS = DS;
