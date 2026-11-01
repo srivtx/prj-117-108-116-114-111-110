@@ -323,7 +323,9 @@ console.log('\n— learn/pure · build-your-own-X cores —');
 console.log('\n— learn/arena-data.js · bank integrity + solutions —');
 {
   const A = require(join(root, 'learn/arena-data.js'));
-  ok(A.topics.length === 12, `12 topics defined (${A.topics.length})`);
+  ok(A.topics.length === 14, `14 topics defined (${A.topics.length})`);
+  ok(A.problems.length === 105, `105 problems in the bank (${A.problems.length})`);
+  ok(A.problems.filter(p => p.run).length === 78, `78 problems carry a live judge (${A.problems.filter(p => p.run).length})`);
   let allFields = true, allHints = true, allSolve = true, runnable = 0;
   const topicIds = new Set(A.topics.map(t => t.id));
   const ids = new Set();
@@ -352,6 +354,133 @@ console.log('\n— learn/arena-data.js · bank integrity + solutions —');
   ok(allSolve, `every runnable solution passes its own tests (${runnable} runnable)`);
 }
 
+console.log('\n— learn/solves · the walkthrough volumes —');
+{
+  global.window = global; global.globalThis = global;
+  for (let i = 1; i <= 6; i++) require(join(root, 'learn/solves', `walks-${i}.js`));
+  const W = global.window.ULTRON_WALKS;
+  const A = require(join(root, 'learn/arena-data.js'));
+  const ids = A.problems.map(p => p.id);
+  ok(Object.keys(W).length === 105, `105 walkthroughs written (${Object.keys(W).length})`);
+  ok(ids.every(id => W[id]), 'every arena problem has its walkthrough (none skipped)');
+  ok(ids.every(id => W[id].steps.length === 5 && W[id].trace && W[id].transfer), 'every walkthrough has the five moves + dry run + transfer');
+  ok(ids.every(id => W[id].edges.length >= 2 && W[id].asks.length >= 2), 'every walkthrough carries ≥2 edge cases and ≥2 follow-ups');
+}
+
+console.log('\n— learn/econ · the twelve pure cores —');
+{
+  const M = require(join(root, 'learn/econ/money.js'));
+  const g = M.geomSum(100, 1.07, 30);
+  ok(Math.abs(g.value - g.loop) < 1e-6, 'money: geometric closed form equals the loop');
+  ok(Math.abs(M.doubling(0.07).exact - 10.24) < 0.05, 'money: 7% doubles in ~10.24y');
+  ok(Math.abs(M.annuity(1000, 0.04, Infinity) - 1000 * 0.04 / 1.04) < 1e-9, 'money: perpetuity pays r/(1+r)·W');
+
+  const S = require(join(root, 'learn/econ/solow.js'));
+  const ss = S.steadyState(0.3, 0, 0.05, 0.4);
+  ok(Math.abs(ss - S.steadyStateNoN(0.3, 0.05, 0.4)) / ss < 1e-6, 'solow: numeric k* meets the closed form');
+  const rows = S.path(ss * 0.5, 0.3, 0, 0.05, 0.4, 400);
+  ok(Math.abs(rows[rows.length - 1].k - ss) / ss < 1e-3, 'solow: the path converges to k*');
+  ok(Math.abs(S.goldenRule(0, 0.05, 0.4).s - 0.4) < 0.02, 'solow: golden rule saving = α');
+
+  const K = require(join(root, 'learn/econ/markov.js'));
+  const P = K.PRESETS.weather.P;
+  const pi = K.stationary(P);
+  ok(K.isStationary(pi, P), 'markov: π = π·P');
+  const sim = K.simulate(P, 20000, 7, 0);
+  ok(sim.occupancy.every((v, i) => Math.abs(v - pi[i]) < 0.02), 'markov: simulated occupancy meets π');
+
+  const MC = require(join(root, 'learn/econ/mcall.js'));
+  const sol = MC.solve(MC.DEFAULTS);
+  ok(sol.resWage > 40 && sol.resWage < 80, `mcall: reservation wage in range (${sol.resWage})`);
+  const cmp = MC.compare(MC.DEFAULTS, 400, 120, 5);
+  ok(cmp.optimal.value > cmp.always.value && cmp.optimal.value > cmp.picky.value, `mcall: optimal beats both baselines (${cmp.optimal.value.toFixed(1)} vs ${cmp.always.value.toFixed(1)}/${cmp.picky.value.toFixed(1)})`);
+  ok(MC.solve({ ...MC.DEFAULTS, b: 40 }).resWage > sol.resWage, 'mcall: richer benefits raise the reservation wage');
+
+  const V = require(join(root, 'learn/econ/valuefn.js'));
+  const r = V.iterate(V.DEFAULTS, 400);
+  const pol = V.policy(V.DEFAULTS, r.V);
+  let worstRel = 0;
+  r.ks.forEach((k, i) => { const want = V.policyClosedForm(k, V.DEFAULTS); if (want > 1e-6) worstRel = Math.max(worstRel, Math.abs(pol[i] - want) / want); });
+  ok(worstRel < 0.06, `valuefn: VFI policy meets the closed form (${(worstRel * 100).toFixed(1)}% worst)`);
+  ok(r.errors[r.errors.length - 1] < 1e-3, 'valuefn: sweeps contract to a fixed point');
+
+  const C = require(join(root, 'learn/econ/consume.js'));
+  const resp = C.shockResponse(10, 0.05);
+  ok(resp.transitoryRise < 0.6, `consume: one-off bonus moves c by a sliver (${resp.transitoryRise.toFixed(2)})`);
+  ok(Math.abs(resp.permanentRise - 10) < 0.5, `consume: permanent raise passes through (${resp.permanentRise.toFixed(2)})`);
+  const cc = C.compareConsumers(60, 0.05, 3);
+  ok(cc.varSmooth < cc.varHand * 0.2, 'consume: the smoother varies far less');
+
+  const CK = require(join(root, 'learn/econ/clock.js'));
+  const rand = CK.rng(3);
+  const draws = []; for (let i = 0; i < 20000; i++) draws.push(CK.expSample(2, rand));
+  ok(Math.abs(draws.reduce((a, b) => a + b, 0) / draws.length - 0.5) < 0.02, 'clock: exponential mean = 1/λ');
+  const Q = CK.TWO_STATE.Q(1.5, 2.5);
+  const cts = CK.simulateCT(Q, 40000, 5);
+  const pct = CK.stationaryCT(Q);
+  ok(cts.occupancy.every((v, i) => Math.abs(v - pct[i]) < 0.02), 'clock: CTMC occupancy meets πQ=0');
+  const rand2 = CK.rng(11);
+  let tot = 0; for (let i = 0; i < 2000; i++) tot += CK.poissonCount(2, 1, rand2);
+  ok(Math.abs(tot / 2000 - 2) < 0.08, 'clock: Poisson counts average λt');
+
+  const W8 = require(join(root, 'learn/econ/crowd.js'));
+  ok(W8.gini([1, 1, 1, 1]) === 0 && Math.abs(W8.gini([0, 0, 0, 4]) - 0.75) < 1e-9, 'crowd: gini known values');
+  ok(W8.run(200, 40, 1, 5).giniFinal < 1e-9, 'crowd: γ=1 holds equality');
+  const wild = W8.run(400, 60, 0, 9);
+  ok(wild.giniFinal > 0.3 && wild.p99 / wild.p50 > 3, `crowd: γ=0 grows a tail (gini ${wild.giniFinal.toFixed(2)}, p99/p50 ${(wild.p99 / wild.p50).toFixed(1)})`);
+
+  const D = require(join(root, 'learn/econ/deep.js'));
+  const model = { alpha: 0.4, beta: 0.9, kMin: 0.05, kMax: 5 };
+  const t1 = D.train(model, D.makeDataset(40, model, 13), 4000, 17);
+  const t2 = D.train(model, D.makeDataset(200, model, 13), 8000, 17);
+  const e1 = D.maxError(model, t1.net, 0.05, 5);
+  const e2 = D.maxError(model, t2.net, 0.05, 5);
+  ok(e1 < 0.35, `deep: the net learns the policy (${e1.toFixed(4)} worst error)`);
+  ok(e2 < 0.15, `deep: more samples, tighter fit (${e2.toFixed(4)})`);
+  const path = D.simulateWithPolicy(model, t2.net, 1, 40);
+  let worstPath = 0;
+  path.pathTrue.forEach((k, i) => worstPath = Math.max(worstPath, Math.abs(k - path.pathNet[i])));
+  ok(worstPath < 0.35, `deep: the net-run economy tracks truth (${worstPath.toFixed(3)})`);
+
+  const NN = require(join(root, 'learn/pure/autograd.js'));
+  const PIN = require(join(root, 'learn/econ/pinn.js'));
+  const dataNet = PIN.trainOnData(NN, [0.5, 2.5], 800, 5, 0.05);
+  const resNet = PIN.trainOnResidual(NN, 1200, 3, 0.03, 7);
+  const eD = PIN.maxError(dataNet, 0, 3), eR = PIN.maxError(resNet, 0, 3);
+  ok(eR < 0.12, `pinn: equation-only net fits e^−t (${eR.toFixed(4)})`);
+  ok(eD > eR, `pinn: two data points lose to the equation (${eD.toFixed(4)} vs ${eR.toFixed(4)})`);
+
+  const G = require(join(root, 'learn/econ/gauss.js'));
+  ok(Math.abs(G.posterior([1, 3], [0.5, -0.3], 1, { l: 1, noise: 1e-6 }).mean - 0.5) < 1e-3, 'gauss: interpolates at a training point');
+  const far = G.posterior([1, 3], [0.5, -0.3], 30, { l: 1, noise: 1e-6 });
+  ok(Math.abs(far.mean) < 1e-6 && far.sd > 0.99, 'gauss: the prior returns far from data');
+  const L = G.chol([[2, 1], [1, 2]]);
+  const recon = [0, 1].map(i => [0, 1].map(j => L[i].reduce((a, v, k) => a + v * L[j][k], 0)));
+  ok(recon.every((row, i) => row.every((v, j) => Math.abs(v - (i === j ? 2 : 1)) < 1e-9)), 'gauss: chol reconstructs K');
+  ok(G.bestNext([1, 3], [0.5, -0.3], [0, 1, 2, 3, 4, 5], { l: 1 }).sd > 0.8, 'gauss: UCB aims at the widest bars');
+
+  const CL = require(join(root, 'learn/econ/climate.js'));
+  const scn = { F0: 8.5, lambda: 1, C: 10, a: 1, b: 2, costK: 6 };
+  ok(Math.abs(CL.runScenario(scn, 0, 200).dT - 8.5) < 1e-6, 'climate: 200y integrates to F/λ');
+  const ens = CL.ensemble(CL.DEFAULTS, 0.3, 300, 7);
+  ok(ens.p5 <= ens.p50 && ens.p50 <= ens.p95, 'climate: ensemble quantiles ordered');
+  const ch = CL.chooseEffort(CL.DEFAULTS, 120, 7);
+  ok(ch.bestTail.e >= ch.bestEV.e, `climate: tail-aware abates at least as much (${ch.bestTail.e} vs ${ch.bestEV.e})`);
+}
+
+console.log('\n— pages · presence + wiring —');
+{
+  const pages = ['index.html', 'stats/index.html', 'build/index.html', 'arena/index.html', 'solves/index.html', 'econ/index.html'];
+  ok(pages.every(pg => existsSync(join(root, pg))), 'all six pages exist');
+  const solves = readFileSync(join(root, 'solves/index.html'), 'utf8');
+  ok(solves.includes('walks-1.js') && solves.includes('walks-6.js') && solves.includes('solves.js'), 'solve hall loads all six volumes + renderer');
+  const econ = readFileSync(join(root, 'econ/index.html'), 'utf8');
+  ok(['econ-sims.js', 'econ-sims2.js', 'econ-stories.js', 'econ/money.js', 'econ/climate.js'].every(s => econ.includes(s)), 'econ page loads sims, stories and all twelve cores');
+  ok(econ.includes('sischei.github.io') && econ.includes('quantecon.org'), 'the source ladder links both books');
+  const arena = readFileSync(join(root, 'arena/index.html'), 'utf8');
+  ok(arena.includes('../solves/'), 'arena links the solve hall');
+}
+
 console.log('\n— learn/worlds · presence + registration sanity —');
 {
   const worldFiles = ['w01-growth', 'w02-arrays', 'w03-chains', 'w04-skiplists', 'w05-hashing', 'w06-trees', 'w07-balance', 'w08-heaps', 'w09-sorting', 'w10-graphs', 'w11-tries', 'w12-btrees'];
@@ -365,8 +494,8 @@ console.log('\n— learn/worlds · presence + registration sanity —');
     if (!src.includes('story()')) { allOk = false; console.log('    └ missing story in', w); }
   }
   ok(allOk, `all 12 world modules present, registered, with notes/quiz/story`);
-  const pages = ['index.html', 'stats/index.html', 'build/index.html', 'arena/index.html'];
-  ok(pages.every(pg => existsSync(join(root, pg))), 'all four pages exist');
+  const pages = ['index.html', 'stats/index.html', 'build/index.html', 'arena/index.html', 'solves/index.html', 'econ/index.html'];
+  ok(pages.every(pg => existsSync(join(root, pg))), 'all six pages exist');
   const idx = readFileSync(join(root, 'index.html'), 'utf8');
   ok(worldFiles.every(w => idx.includes('worlds/' + w + '.js')), 'hub loads all 12 world modules');
 }
