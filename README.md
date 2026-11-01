@@ -114,7 +114,7 @@ Every station runs a real, tested pure core in `learn/econ/` — the same file t
 ## Verified, not just written
 
 ```bash
-node tools/verify.mjs     # run it yourself — 100+ checks, 0 failures
+node tools/verify.mjs     # run it yourself — 124 checks, 0 failures
 ```
 
 - **every ODS structure's invariants** — skiplist chains sorted, treap BST+heap, red-black no-red-red and equal black depths, B-tree key bounds and equal leaf depths, heap property, hash tombstone/rehash behavior, the quicksort sorted-input trap;
