@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="The interview arena: the classic questions from LeetCode, Codeforces and big-tech loops — each mapped to the 3D world that trains it, with a hint ladder, a first-principles approach, and an in-browser judge you can practice on right now.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="../learn/lab.css">
+<title>Arena · ULTRON Lab</title>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <div><h1>ULTRON LAB</h1><p>the interview arena</p></div>
+  </a>
+  <div class="hdr-tools">
+    <a class="nb-btn" href="../">3D worlds</a>
+    <a class="nb-btn" href="../build/">Build X</a>
+    <a class="nb-btn" href="../stats/">Stats</a>
+  </div>
+</header>
+<div class="page">
+  <div class="hero">
+    <p class="eyebrow">The arena</p>
+    <h2>Where the worlds meet the whiteboard</h2>
+    <p class="lede">Every classic here is a real, public problem (LeetCode / Codeforces number attached), mapped back to the <b>3D world that trains it</b>. Three hints, first principles, complexity, a working solution — and for a growing subset, an <b>in-browser judge</b>: write the function, run the tests. Statements are paraphrased in our own words; company mentions are folklore, not verified claims. Warm-ups first, hard classics last, no shortcuts.</p>
+    <p style="margin-top:14px"><input type="text" id="arena-filter" placeholder="filter… (e.g. stack, heap, hard, linked)" style="max-width:340px"></p>
+  </div>
+  <div id="arena-list"></div>
+  <div class="block" style="margin-top:34px">
+    <h3>How to use the arena (the honest method)</h3>
+    <ol style="font-size:13.5px;line-height:1.9;margin:0;padding-left:20px">
+      <li><b>Never read the solution first.</b> Re-derive the structure: which world is this? What does that world promise?</li>
+      <li>Open hints one at a time, only after a real attempt — hint 3 is the key idea.</li>
+      <li>Practice runners: make the tests pass, <i>then</i> re-solve from a blank editor the next day. Recall beats re-reading.</li>
+      <li>Say the complexity out loud before checking. Interviewers grade the narration as much as the code.</li>
+      <li>Trained by a world? Go replay its story — the muscle memory transfers.</li>
+    </ol>
+  </div>
+</div>
+<footer class="foot">ULTRON LAB · arena · problem statements paraphrased; IDs are for locating the originals · built by <a href="https://github.com/srivtx">@srivtx</a></footer>
+
+<script src="../learn/arena-data.js"></script>
+<script src="../learn/arena.js"></script>
+</body>
+</html>
