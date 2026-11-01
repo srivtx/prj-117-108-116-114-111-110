@@ -428,9 +428,202 @@
     snapshot() { return { kind: 'linearhash', slots: this.t.map(s => s === null ? null : s === 'DEL' ? 'DEL' : { id: s.id, x: s.x }), d: this.d }; }
   }
 
+  /* ============================================================
+     BinarySearchTree — ODS §6. No balance guarantees (yet).
+     ============================================================ */
+  class BST {
+    constructor() { this.r = null; this.n = 0; this.log = []; }
+    find(x) {
+      let p = this.r; const path = [];
+      while (p !== null) {
+        path.push({ id: p.id, x: p.x });
+        if (x < p.x) p = p.left;
+        else if (x > p.x) p = p.right;
+        else { this.log.push({ op: 'find', x, found: true, path, cost: path.length }); return p; }
+      }
+      this.log.push({ op: 'find', x, found: false, path, cost: path.length });
+      return null;
+    }
+    add(x) {
+      const node = { id: nid(), x, left: null, right: null, parent: null };
+      let p = this.r, depth = 0;
+      if (p === null) { this.r = node; this.n++; this.log.push({ op: 'add', id: node.id, x, root: true, cost: 1 }); return true; }
+      while (true) {
+        depth++;
+        if (x < p.x) { if (p.left === null) { p.left = node; node.parent = p; break; } p = p.left; }
+        else if (x > p.x) { if (p.right === null) { p.right = node; node.parent = p; break; } p = p.right; }
+        else return false;
+      }
+      this.n++;
+      this.log.push({ op: 'add', id: node.id, x, cost: depth });
+      return true;
+    }
+    remove(x) {
+      const node = this.find(x);
+      if (!node) return null;
+      // case analysis for the story engine — ODS style:
+      // two children → copy successor value up, then splice the successor leaf
+      let which;
+      if (node.left !== null && node.right !== null) {
+        which = 'two-children';
+        let s = node.right; while (s.left !== null) s = s.left;
+        this.log.push({ op: 'successor', from: node.id, to: s.id, x: s.x });
+        node.x = s.x;
+        this.splice(s);
+      } else {
+        which = (node.left === null && node.right === null) ? 'leaf' : 'one-child';
+        this.splice(node);
+      }
+      this.log.push({ op: 'remove', id: node.id, x, which });
+      return x;
+    }
+    splice(n) {
+      let child = n.left !== null ? n.left : n.right;
+      let parent = n.parent;
+      if (n === this.r) { this.r = child; if (child) child.parent = null; }
+      else if (parent.left === n) parent.left = child; else parent.right = child;
+      if (child) child.parent = parent;
+      this.n--;
+    }
+    traverse(kind) {
+      const out = [];
+      const walk = (p) => {
+        if (!p) return;
+        if (kind === 'pre') out.push(p.x);
+        walk(p.left);
+        if (kind === 'in') out.push(p.x);
+        walk(p.right);
+        if (kind === 'post') out.push(p.x);
+      };
+      walk(this.r);
+      this.log.push({ op: 'traverse', kind, order: out.slice() });
+      return out;
+    }
+    depth() {
+      const d = (p) => p === null ? 0 : 1 + Math.max(d(p.left), d(p.right));
+      return d(this.r);
+    }
+    size() { return this.n; }
+    nodesList() {
+      const out = [];
+      const walk = (p) => { if (p) { out.push(p); walk(p.left); walk(p.right); } };
+      walk(this.r); return out;
+    }
+    snapshot() {
+      const nodes = this.nodesList().map(p => ({ id: p.id, x: p.x, parent: p.parent ? p.parent.id : null }));
+      return { kind: 'bst', nodes, rootId: this.r ? this.r.id : null, depth: this.depth() };
+    }
+  }
+
+  /* ============================================================
+     Treap — ODS §7.2. BST by key, heap by random priority.
+     Rotations keep both true; expected depth O(log n).
+     ============================================================ */
+  class Treap {
+    constructor(seed) {
+      this.rnd = mulberry32(seed === undefined ? 0x7ea : seed);
+      this.r = null; this.n = 0; this.log = [];
+    }
+    add(x) {
+      const pri = this.rnd();
+      const node = { id: nid(), x, pri, left: null, right: null, parent: null };
+      this.log.push({ op: 'draw', id: node.id, x, pri });
+      if (!this.r) { this.r = node; this.n++; return true; }
+      let p = this.r;
+      while (true) {
+        if (x < p.x) { if (!p.left) { p.left = node; node.parent = p; break; } p = p.left; }
+        else if (x > p.x) { if (!p.right) { p.right = node; node.parent = p; break; } p = p.right; }
+        else return false;
+      }
+      this.n++;
+      // rotate up while child has larger priority (min-heap on pri)
+      while (node.parent && node.pri < node.parent.pri) {
+        this.rotateUp(node);
+      }
+      this.log.push({ op: 'settle', id: node.id, x, pri });
+      return true;
+    }
+    rotateUp(node) {
+      const p = node.parent, g = p.parent;
+      if (p.left === node) { // right rotation
+        p.left = node.right; if (node.right) node.right.parent = p;
+        node.right = p;
+        this.log.push({ op: 'rotate', id: node.id, pivot: p.id, dir: 'right' });
+      } else { // left rotation
+        p.right = node.left; if (node.left) node.left.parent = p;
+        node.left = p;
+        this.log.push({ op: 'rotate', id: node.id, pivot: p.id, dir: 'left' });
+      }
+      p.parent = node; node.parent = g;
+      if (!g) this.r = node;
+      else if (g.left === p) g.left = node; else g.right = node;
+    }
+    find(x) {
+      let p = this.r; const path = [];
+      while (p) {
+        path.push({ id: p.id, x: p.x });
+        if (x < p.x) p = p.left; else if (x > p.x) p = p.right; else break;
+      }
+      this.log.push({ op: 'find', x, path });
+      return p;
+    }
+    depth() { const d = p => p ? 1 + Math.max(d(p.left), d(p.right)) : 0; return d(this.r); }
+    nodesList() { const out = []; const w = p => { if (p) { out.push(p); w(p.left); w(p.right); } }; w(this.r); return out; }
+    snapshot() {
+      return {
+        kind: 'treap', rootId: this.r ? this.r.id : null, depth: this.depth(),
+        nodes: this.nodesList().map(p => ({ id: p.id, x: p.x, pri: p.pri, parent: p.parent ? p.parent.id : null }))
+      };
+    }
+    size() { return this.n; }
+  }
+
+  /* ============================================================
+     RedBlack — ODS §9 as a left-leaning red-black tree
+     (Sedgewick's isomorphic encoding of a 2-4 tree).
+     ============================================================ */
+  const RED = true, BLACK = false;
+  class RedBlack {
+    constructor() { this.r = null; this.n = 0; this.log = []; }
+    add(x) {
+      const ins = (h) => {
+        if (!h) { this.n++; return { id: nid(), x, left: null, right: null, color: RED }; }
+        if (x < h.x) h.left = ins(h.left);
+        else if (x > h.x) h.right = ins(h.right);
+        else return h;
+        if (this.isRed(h.right) && !this.isRed(h.left)) { h = this.rotL(h); this.log.push({ op: 'rotate', dir: 'left', at: h.x }); }
+        if (this.isRed(h.left) && this.isRed(h.left.left)) { h = this.rotR(h); this.log.push({ op: 'rotate', dir: 'right', at: h.x }); }
+        if (this.isRed(h.left) && this.isRed(h.right)) { this.flip(h); this.log.push({ op: 'split', at: h.x }); }
+        return h;
+      };
+      this.r = ins(this.r);
+      this.r.color = BLACK;
+      this.log.push({ op: 'add', x });
+      return true;
+    }
+    isRed(h) { return !!h && h.color === RED; }
+    rotL(h) { const x = h.right; h.right = x.left; x.left = h; x.color = h.color; h.color = RED; return x; }
+    rotR(h) { const x = h.left; h.left = x.right; x.right = h; x.color = h.color; h.color = RED; return x; }
+    flip(h) { h.color = RED; if (h.left) h.left.color = BLACK; if (h.right) h.right.color = BLACK; }
+    find(x) { let p = this.r; while (p) { if (x < p.x) p = p.left; else if (x > p.x) p = p.right; else return p; } return null; }
+    depth() { const d = p => p ? 1 + Math.max(d(p.left), d(p.right)) : 0; return d(this.r); }
+    blackDepth() {
+      const d = (p) => p ? (p.color === BLACK ? 1 : 0) + Math.max(d(p.left), d(p.right)) : 0;
+      return d(this.r);
+    }
+    nodesList() { const out = []; const w = p => { if (p) { out.push(p); w(p.left); w(p.right); } }; w(this.r); return out; }
+    snapshot() {
+      return {
+        kind: 'redblack', rootId: this.r ? this.r.id : null, depth: this.depth(),
+        nodes: this.nodesList().map(p => ({ id: p.id, x: p.x, color: p.color, parent: null }))
+      };
+    }
+    size() { return this.n; }
+  }
+
   /* ---------- exports (browser + node) ---------- */
   const DS = {
-    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable
+    mulberry32, rng, rint, shuffle, ArrayStack, ArrayQueue, ArrayDeque, RootishArrayStack, SLList, DLList, SkiplistSSet, mulHash, ChainedHashTable, LinearHashTable, BST, Treap, RedBlack, RED, BLACK
   };
   if (typeof window !== 'undefined') window.ULTRON_DS = DS;
   if (typeof globalThis !== 'undefined') globalThis.ULTRON_DS = DS;
