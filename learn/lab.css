@@ -241,6 +241,8 @@ input[type=text]:focus,input[type=number]:focus,textarea:focus{outline:2px solid
 .hints button:hover{border-color:var(--c2);color:var(--ink)}
 .hints .h{font-size:12.5px;padding:8px 10px;border-left:3px solid var(--c2);background:var(--soft);border-radius:0 6px 6px 0}
 .hints .h b{font:600 10.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c2);margin-right:6px}
+.hints .walk-link{align-self:center;margin-left:auto;font:500 12px var(--f-body);color:var(--c2);text-decoration:none}
+.hints .walk-link:hover{text-decoration:underline}
 details.sol{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
 details.sol summary{cursor:pointer;padding:9px 12px;font:500 12.5px var(--f-body);color:var(--muted);list-style:none;display:flex;gap:8px;align-items:center}
 details.sol summary::before{content:"▸";transition:transform .15s}
@@ -248,6 +250,29 @@ details.sol[open] summary::before{transform:rotate(90deg)}
 details.sol .inner{padding:0 12px 12px}
 details.sol pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:10px;overflow-x:auto;font:12px/1.55 var(--f-mono)}
 .complexity{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+
+/* solve hall cards */
+.walk-moves{display:flex;flex-direction:column;gap:2px;margin:4px 0 10px}
+.walk-move{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:7px 10px;border-radius:7px}
+.walk-move:nth-child(odd){background:var(--soft)}
+.walk-k{font:700 12px var(--f-mono);color:var(--c2);padding-top:1px}
+.walk-move span{display:block;font-size:13px;line-height:1.65;color:var(--ink)}
+.walk-t{display:block;font:600 10.5px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.walk-trace{font-size:12.5px;background:var(--code-bg);border:1px dashed var(--line);border-radius:7px;padding:9px 11px;color:var(--ink)}
+.walk-trace b{font:600 10.5px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--c3);margin-right:8px}
+.walk-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.walk-cols>div{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.walk-cols ul{margin:6px 0 0;padding-left:16px}
+.walk-cols li{font-size:12.5px;line-height:1.7;color:var(--ink)}
+.walk-transfer{margin-top:12px;font-size:13px;border-left:3px solid var(--c3);background:color-mix(in srgb,var(--c3) 7%,transparent);border-radius:0 8px 8px 0;padding:9px 12px}
+.walk-transfer b{font:600 10.5px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--c3);margin-right:8px}
+@media (max-width:700px){.walk-cols{grid-template-columns:1fr}}
+
+/* econ wing extras */
+.src-ladder{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-top:10px}
+.src-ladder a{display:block;font-size:12.5px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--soft);color:var(--ink);text-decoration:none}
+.src-ladder a:hover{border-color:var(--c2)}
+.src-ladder .st{display:block;font:600 10px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c2)}
 
 /* keyboard help grid */
 .keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:10px 0}

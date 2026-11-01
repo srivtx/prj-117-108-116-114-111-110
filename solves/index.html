@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="The Solve Hall: every question in the arena, solved in the open — the five-move transcript (restate, the wall, the turn, the build, the check), a dry run on real input, the edge cases that break naive code, the interviewer's follow-ups, and the pattern to carry away.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="../learn/lab.css">
+<title>Solve Hall · ULTRON Lab</title>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <div><h1>ULTRON LAB</h1><p>the solve hall</p></div>
+  </a>
+  <div class="hdr-tools">
+    <a class="nb-btn" href="../">3D worlds</a>
+    <a class="nb-btn" href="../build/">Build X</a>
+    <a class="nb-btn" href="../stats/">Stats</a>
+    <a class="nb-btn" href="../econ/">Econ</a>
+    <a class="nb-btn" href="../arena/">Arena</a>
+  </div>
+</header>
+<div class="page">
+  <div class="hero">
+    <p class="eyebrow">The solve hall</p>
+    <h2>Every question, solved in the open</h2>
+    <p class="lede">The arena trains you to attempt first. This hall is what you read AFTER the attempt: <b id="sh-count">105</b> worked walkthroughs, every problem in the bank, none skipped. Each one is a transcript of an honest solve — not a recipe to memorize, a way of moving through a problem you can replay on anything.</p>
+    <p style="margin-top:14px"><input type="text" id="sh-filter" placeholder="filter… (e.g. stack, dp, hard, greedy, linked)" style="max-width:340px"></p>
+  </div>
+  <div class="block" style="margin-bottom:26px">
+    <h3>How to read a solve (the honest order)</h3>
+    <ol style="font-size:13.5px;line-height:1.9;margin:0;padding-left:20px">
+      <li><b>Attempt the problem first.</b> A walkthrough read before a real attempt is entertainment, not learning — the struggle is the encoding.</li>
+      <li><b>Read "the wall" carefully.</b> Knowing why the obvious approach fails is worth more than the trick that replaces it.</li>
+      <li><b>Re-derive "the turn" from the wall.</b> Cover the rest and ask: given that failure, what WOULD have to be true?</li>
+      <li><b>Do the dry run yourself</b> on paper, then confirm against the trace line.</li>
+      <li><b>Close the tab and re-solve tomorrow.</b> Recall beats re-reading — the arena's judge is still there for the fingers.</li>
+    </ol>
+  </div>
+  <div id="sh-list"></div>
+  <div class="block" style="margin-top:34px">
+    <h3>The five moves, once more</h3>
+    <p style="font-size:13.5px;line-height:1.8;margin:0"><b>Restate</b> — say what is really being asked, in structure terms (which world is this?). <b>The wall</b> — write the obvious approach and say exactly why it fails; walls are made of time, memory or impossibility. <b>The turn</b> — the one reframe that removes the wall, always paid for by a property you can name. <b>The build</b> — the algorithm as a loop plus invariants, not as memorized lines. <b>The check</b> — complexity, and the correctness argument in one sentence. Then: the dry run, the edges, the follow-ups, and the <b>transfer</b> — the pattern this problem was hiding.</p>
+  </div>
+</div>
+<footer class="foot">ULTRON LAB · solve hall · every solution written for this lab · problems paraphrased; IDs locate the originals · built by <a href="https://github.com/srivtx">@srivtx</a></footer>
+
+<script src="../learn/arena-data.js"></script>
+<script src="../learn/solves/walks-1.js"></script>
+<script src="../learn/solves/walks-2.js"></script>
+<script src="../learn/solves/walks-3.js"></script>
+<script src="../learn/solves/walks-4.js"></script>
+<script src="../learn/solves/walks-5.js"></script>
+<script src="../learn/solves/walks-6.js"></script>
+<script src="../learn/solves.js"></script>
+</body>
+</html>

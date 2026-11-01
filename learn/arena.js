@@ -45,6 +45,7 @@
       <p class="stmt">${p.stmt}</p>
       <div class="hints">
         <button>Hint 1</button><button>Hint 2</button><button>Hint 3 (the key)</button>
+        <a class="walk-link" href="../solves/#${p.id}" title="the five-move walkthrough: restate, the wall, the turn, the build, the check">full walkthrough ↗</a>
       </div>
       <details class="sol"><summary>💬 Approach &amp; complexity</summary>
         <div class="inner">
