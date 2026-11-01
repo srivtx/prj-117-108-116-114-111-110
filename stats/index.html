@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Probability and statistics you can run: a Galton board, the law of large numbers, linearity of expectation, the CLT, Bayes, the birthday paradox and variance — every idea simulated before it is named.">
+<meta name="theme-color" content="#5d4fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='2' width='8' height='8' fill='%23d94f70'/><rect x='22' y='2' width='8' height='8' fill='%235d4fe0'/><rect x='2' y='12' width='8' height='8' fill='%230f9e8e'/><rect x='12' y='12' width='8' height='8' fill='%235d4fe0'/><rect x='22' y='12' width='8' height='8' fill='%23d94f70'/><rect x='2' y='22' width='8' height='8' fill='%235d4fe0'/><rect x='12' y='22' width='8' height='8' fill='%23c8920e'/><rect x='22' y='22' width='8' height='8' fill='%235d4fe0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<link rel="stylesheet" href="../learn/lab.css">
+<title>Probability &amp; Stats · ULTRON Lab</title>
+</head>
+<body>
+<div class="app" style="height:100%;display:flex;flex-direction:column">
+  <header class="top">
+    <a class="brand" href="../">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <div><h1>ULTRON LAB</h1><p>probability &amp; statistics, simulated first</p></div>
+    </a>
+    <nav class="tabs" id="tabs" aria-label="Worlds"></nav>
+    <div class="hdr-tools">
+      <a class="nb-btn" href="../">3D worlds</a>
+      <a class="nb-btn" href="../build/">Build X</a>
+      <a class="nb-btn" href="../arena/">Arena</a>
+      <button class="nb-btn" id="nb-btn" aria-label="Open notebook">Notebook <b id="nb-count" class="zero">0</b></button>
+    </div>
+  </header>
+
+  <div class="lab">
+    <div class="stage">
+      <canvas id="gl" hidden></canvas>
+      <canvas id="c2d" style="width:100%;height:100%;display:block"></canvas>
+      <div class="guide" id="guide" hidden></div>
+    </div>
+    <div class="panel">
+      <div class="station">
+        <div>
+          <p class="eyebrow" id="w-eyebrow">Stats 1</p>
+          <h2 id="w-title">…</h2>
+          <p class="lede" id="w-lede">…</p>
+        </div>
+        <div class="block" id="w-controls"></div>
+        <div class="stats" id="w-stats" hidden></div>
+        <div>
+          <button class="btn primary story-btn" id="story-btn">▶ Play the guided story</button>
+        </div>
+        <div class="block" id="w-why"><h3>Why this matters</h3><div id="w-why-body" style="font-size:13px"></div></div>
+        <p class="note">These worlds are the probability chapter of <i>Open Data Structures</i> §1.3 expanded into practice — the same math that bounds W04's coins, W05's hashing and W07's treaps. Built by <a href="https://github.com/srivtx">@srivtx</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nb" id="nb" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../learn/ds.js"></script>
+<script src="../learn/sim3d.js"></script>
+<script src="../learn/story.js"></script>
+<script src="../learn/stats-sims.js"></script>
+<script>
+/* ============================================================
+   The seven stories + notes + quiz, attached to the sims.
+   (Defined before the shell script below uses STORIES.attach.)
+   ============================================================ */
+window.STORIES = {
+  attach(list) {
+    const byId = Object.fromEntries(list.map(s => [s.id, s]));
+    byId.s1.story = () => ({
+      title: 'Stats 1 · Galton', subtitle: 'Coin flips become a bell',
+      steps: [
+        { say: `Meet the <b>Galton board</b>: pegs in a triangle, a ball on top. At every peg the ball flips a mental coin: <b>left or right</b>, exactly ½–½.<br><br>Drop one ball and you know <i>nothing</i> about where the next lands.`,
+          task: 'Press <b>drop a ball</b> four times. Try to predict the next bin. (You can\'t — and that\'s the point.)',
+          hint: 'Each ball takes 9 independent coin flips. Any bin is possible.',
+          okText: 'Individually unpredictable. Now the surprise: drop <i>many</i>, and the unpredictable becomes a <b>shape</b>.', learn: ['s1-random'] },
+        { say: `Now let the crowd speak.`,
+          task: 'Press <b>drop 100</b> — once, then again. Watch the bins underneath.',
+          hint: 'The middle bins fill, the edge bins starve.',
+          okText: 'A <b>bell</b>: many paths lead to the middle (some left, some right), only ONE path leads to the far edge (all-left or all-right). Count the paths and you have the binomial distribution — the bell is made of <i>path counting</i>.', learn: ['s1-bell', 's1-paths'] },
+        { predict: { q: 'Which single bin collects the MOST balls in the long run?', placeholder: 'left / middle / right…', grade: ans => { const t = ans.trim().toLowerCase(); return { right: t.includes('midd'), msg: t.includes('midd') ? 'Right — the middle: the most distinct paths (C(9, k) is maximized at k ≈ 4–5). Edge bins need a 9-flip streak.' : 'The <b>middle</b>: most paths lead there (C(9,4) = 126 paths vs C(9,0) = 1 for the far edge).' }; } }, learn: ['s1-paths'] },
+        { say: `One more layer of honesty: the bell does not <i>have</i> to be symmetric about anything you planned. It emerges from <b>adding up many small independent chances</b> — this exact mechanism (sum of coin flips) is why:<br><br>• measurement errors are normal (many tiny perturbations summed)<br>• stock returns are roughly normal (many trades summed)<br>• and ODS can promise skiplists O(log n) (sum of many coin-flip costs)`, learn: ['s1-why-bells'] },
+        { say: `You have just run the first law of the lab's Stats half: <b>randomness individual, lawfulness collective</b>.<br><br>Next tab: what "average" really promises.` }
+      ]
+    });
+    byId.s2.story = () => ({
+      title: 'Stats 2 · LLN', subtitle: 'The average settles',
+      steps: [
+        { say: `A die is the purest random thing in the lab. But it has a secret: its <b>expected value</b> — the average of all six faces: <span class="num">(1+2+3+4+5+6)/6 = 3.5</span>.<br><br>Note: 3.5 is not a possible roll. It's a <i>long-run promise</i>.`,
+          task: 'Press <b>roll 1</b> five times and watch the running-average line jump.',
+          hint: 'Single rolls are pure noise; the blue line is the average so far.',
+          okText: 'The line thrashes — a single roll moves the average a lot when n is small. Now let n grow.', learn: ['s2-ev'] },
+        { predict: { q: 'You roll 10,000 times. Where does the running average end up?', placeholder: 'a number…', grade: ans => { const v = parseFloat(ans); return { right: Math.abs(v - 3.5) < 0.35, msg: Math.abs(v - 3.5) < 0.35 ? `Right — it closes in on <b>3.5</b>. Roll 10,000 now and watch.` : `On <b>3.5</b> — the expected value. Roll 10,000 and watch it pin down. (It approaches, never equals: settling ≠ stopping.)` }; } }, learn: ['s2-lln'] },
+        { say: `Press <b>roll 1,000</b> about ten times and watch the line hug 3.5.`,
+          task: 'Reach 10,000 rolls total.',
+          hint: 'The wobble shrinks like 1/√n — 100× more rolls, 10× steadier.',
+          okText: `The <b>law of large numbers</b>: the sample average converges to E[X]. The wobble shrinks like <b>1/√n</b> — that square root is the same one from the birthday paradox, and it prices every Monte Carlo simulation and every A/B test you'll ever run.`, learn: ['s2-root-n'] },
+        { say: `What the LLN does NOT say: "after 10 below-average rolls, a 6 is due." The die has no memory — each roll is independent. Believing otherwise is the <b>gambler's fallacy</b>, and it costs people real money.<br><br>Averages describe crowds, never individuals.` }
+      ]
+    });
+    byId.s3.story = () => ({
+      title: 'Stats 3 · Expectation', subtitle: 'Linearity: count without enumerating',
+      steps: [
+        { say: `The book's favorite trick (ODS §1.3.4): how many <b>heads</b> in 10 coin flips?<br><br>Hard way: enumerate all 2¹⁰ = 1,024 outcomes, count heads in each, average. Fine for 10 coins. Impossible for 10,000.`,
+          task: 'Press <b>flip all</b> a few times. The coins show H/T; the histogram records heads-per-round.',
+          hint: 'Each round lands near 5 — but rarely exactly 5.',
+          okText: 'The histogram already hovers around 5 = k/2. Now the trick that skips the enumeration entirely…', learn: ['s3-question'] },
+        { say: `<b>Indicator variables.</b> Define, for coin i:<br><br>
+          <code>Iᵢ = 1 if the i-th flip is heads, else 0</code><br><br>
+          Then heads = I₁ + I₂ + … + I₁₀. And E[Iᵢ] = ½·1 + ½·0 = <b>½</b> — one coin, no enumeration.<br><br>
+          <b>Linearity of expectation</b>: E[X + Y] = E[X] + E[Y] — <i>always</i>, no independence needed. So:<br><br>
+          E[heads] = Σ E[Iᵢ] = 10 × ½ = <b>5</b>.`,
+          task: `Run <b>×100 rounds</b> and check the histogram's center against the promise: ${'k'}/2.`,
+          hint: 'The blue "expected" marker sits exactly at k/2.',
+          okText: 'The hard way was 1,024 terms. The indicator way was 10 — and it works for k = 1,000,000 identically. <b>This is the technique that proves skiplists, treaps and universal hashing correct.</b>', learn: ['s3-indicator', 's3-linearity'] },
+        { predict: { q: 'A shuffled deck of 52 cards. Expected number of cards that stay in their original position?', placeholder: 'a number…', grade: ans => { const v = parseFloat(ans); return { right: Math.abs(v - 1) < 0.15, msg: Math.abs(v - 1) < 0.15 ? `Right — <b>1</b>. Indicator per card: P(card i stays) = 1/52, so E = 52 × 1/52 = 1. No derangement formula needed — linearity does it in one line.` : `The answer is <b>1</b>: 52 indicators × probability 1/52 each. Linearity of expectation kills this classic interview question in one line.` }; } }, learn: ['s3-fixed-point'] },
+        { say: `Where you'll use it:<br><br>• expected chain length in a hash table (W05): n/m, by indicators<br>• expected skiplist search (W04): sum of expected per-level costs<br>• expected quicksort comparisons: indicators over pairs<br>• "expected number of swaps until sorted" — always split into per-element questions.<br><br><b>Count by adding simple expectations, not by enumerating worlds.</b>` }
+      ]
+    });
+    byId.s4.story = () => ({
+      title: 'Stats 4 · CLT', subtitle: 'Bells come from adding',
+      steps: [
+        { say: `One die: flat — six equally likely faces, no bell anywhere. But we rarely care about one draw; we care about <b>sums</b>: total of a week of rolls, aggregate of a million requests…`,
+          task: 'Set <b>m = 1</b> and run <b>2,000 trials</b>: the histogram is flat. Then set <b>m = 2</b> and run 2,000 again.',
+          hint: 'm=2 already shows a triangle; m=5 curves.',
+          okText: 'By m = 5 the bell is unmistakable — from completely un-bell-shaped ingredients. That alchemy is the <b>central limit theorem</b>.', learn: ['s4-flat-to-bell'] },
+        { say: `The CLT, in lab terms: <b>sum (or average) of many independent draws → approximately normal</b>, regardless of the source distribution's shape. The mean is n·μ; the spread is σ√n (standard deviations add like orthogonal vectors — variances add linearly).`,
+          task: 'Set m = 12 and run 2,000: check the reported mean against theory 3.5 × 12 = 42.',
+          hint: 'The red curve is the normal the theorem promises.',
+          okText: `Mean = 3.5·m exactly as promised, and the red normal overlay matches the bars. This is why "assume normal" is a engineering <i>derivation</i>, not a habit: whenever your quantity is an aggregate of many small effects, the bell is earned.`, learn: ['s4-clt'] },
+        { predict: { q: 'Averages of m=25 samples have standard deviation σ/√m times a single draw. A single die has σ ≈ 1.71. The average of 25 rolls has σ ≈ ?', placeholder: 'a number…', grade: ans => { const v = parseFloat(ans); return { right: Math.abs(v - 0.34) < 0.08, msg: Math.abs(v - 0.34) < 0.08 ? `Right: 1.71/√25 = <b>0.34</b>. That 1/√m shrinkage is why bigger samples are better — and why the Galton bins narrow as you drop more balls.` : `1.71 / √25 = <b>0.34</b>. Standard error shrinks like 1/√m: quadruple the data, halve the noise. (Same square root as the LLN wobble and the birthday scale — mathematics reuses everything.)` }; } }, learn: ['s4-se'] },
+        { say: `Interviews love the flip side: <b>when is normal the WRONG assumption?</b> Heavy tails (income, web page sizes, degree distributions), maximums (floods, failures), and small-n samples don't earn the bell. Now you can say <i>why</i>: they are not sums of many small independent effects.` }
+      ]
+    });
+    byId.s5.story = () => ({
+      title: 'Stats 5 · Bayes', subtitle: 'The test is not the truth',
+      steps: [
+        { say: `The setup: a disease affects <b>1%</b> of people. A test catches <b>90%</b> of the sick (sensitivity) and falsely flags <b>5%</b> of the healthy (false-positive rate).<br><br>You test positive. What is the chance you're sick? Your whole intuition says ~90%. The grid says otherwise.`,
+          task: 'Read the grid: 1,000 people — red = sick & positive, amber = healthy & positive. Count them with your eyes.',
+          hint: 'The amber dots vastly outnumber the red ones — because healthy people are so COMMON.',
+          okText: `Amber outweighs red heavily: ~50 healthy false-positives vs ~9 true positives. The crowd of healthy people drowns the test's accuracy.`, learn: ['s5-base-rate'] },
+        { say: `<b>Bayes' rule</b> is just careful bookkeeping about which crowd you're in:<br><br>
+          <code>P(sick | +) = P(+ | sick)·P(sick) / P(+)</code><br><br>
+          The denominator P(+) = true positives <b>plus</b> false positives — that's the whole grid lighting up, both honest and dishonest dots.`,
+          predict: { q: 'With the defaults (1% sick, 90% sensitivity, 5% false-positive): P(sick | positive) ≈ ?', placeholder: 'a percent…', grade: ans => { const v = parseFloat(ans); return { right: Math.abs(v - 15) < 5, msg: Math.abs(v - 15) < 5 ? `Right: ≈ <b>15%</b>. (0.9×0.01) / (0.9×0.01 + 0.05×0.99) = 0.153. Nine in ten positives are healthy people. Now check the stat readout on the grid.` : `≈ <b>15%</b>: (0.9 × 0.01) / (0.9 × 0.01 + 0.05 × 0.99) = 0.153. Even with a "90% accurate" test, only ~15% of positives are truly sick — because healthy people are everywhere.` }; } }, learn: ['s5-bayes'] },
+        { say: `Now the lever that changes everything: <b>prevalence</b>.`,
+          task: 'Drag prevalence from 1% to 10%, then 30%. Watch P(sick|+) and the red/amber balance.',
+          hint: 'More sick people → positives get more honest.',
+          okText: `At 30% prevalence, P(sick|+) is ~89%. Same test! The test never changed — <b>the population did</b>. This is why screening rare diseases in everyone backfires, and why doctors test after symptoms (symptoms raise the prior).`, learn: ['s5-prior'] },
+        { say: `Bayes in your world:<br><br>• spam filters: P(spam | "free money!!!")<br>• A/B tests: P(B better | observed lift)<br>• interview brainteasers: "two children, one is a girl born Tuesday"…<br>• and every time you update a belief instead of replacing it.<br><br><b>Evidence doesn't speak; it updates a prior.</b>` }
+      ]
+    });
+    byId.s6.story = () => ({
+      title: 'Stats 6 · Birthday', subtitle: 'Collisions come early',
+      steps: [
+        { say: `23 people in a room: even money (50.7%) two share a birthday. It FEELS wrong — 23 vs 365 days. The trick: the question isn't about <b>people</b>, it's about <b>pairs</b>.<br><br>23 people = C(23,2) = <b>253 pairs</b>, each a 1/365 collision chance. 253 lottery tickets, not 23.`,
+          task: 'Press <b>500 rooms</b> and read the histogram: where does the first collision land?',
+          hint: 'The red bar is 23 — the theoretical coin-flip point.',
+          okText: 'The mass of "first collision" sits right around 20–25 people. √(2·365·ln 2) ≈ 22.5 — the scale is the <b>square root</b> of the space.', learn: ['s6-pairs'] },
+        { predict: { q: 'Set the slider to a hash table of <b>16 buckets</b> (W05!). How many inserts until a 50% chance of a collision?', placeholder: 'a number…', grade: ans => { const v = parseInt(ans); return { right: v >= 4 && v <= 7, msg: v >= 4 && v <= 7 ? `Right — about <b>5–6</b>. √(2·16·ln2) ≈ 4.7. Try it: buckets=16, run 500 rooms, and the histogram pins around 5.` : `About <b>5–6</b>: √(2·16·ln 2) ≈ 4.7. Collisions are inevitable almost immediately — which is why W05 was built to live with them, not avoid them.` }; } }, learn: ['s6-hash'] },
+        { say: `Switch the slider to <b>16</b> and run 500 rooms — you are now simulating W05's hash table directly: 12 balls, 16 buckets, ~5.6 empty. Same math, both worlds.<br><br>This is also why:<br>• 64-bit hash collisions need only ~5 billion keys (2³²)<br>• GUIDs use 122 bits to make collisions cosmically rare<br>• and why "birthday attacks" exist against short signatures.`,
+          task: 'Run the 16-bucket version to confirm the ~5.',
+          hint: 'Watch the histogram center land on 5.',
+          okText: '<b>The collision scale is always √(space)</b> — the square root strikes again (LLN wobble, standard error, and now collisions: three names, one root).', learn: ['s6-sqrt'] }
+      ]
+    });
+    byId.s7.story = () => ({
+      title: 'Stats 7 · Variance', subtitle: 'The average of surprises',
+      steps: [
+        { say: `The mean tells you where the center is. It says nothing about <b>how far things wander</b>. Two servers can both average 50ms response — one always 49–51ms, the other 5ms or 200ms. Same mean, opposite products.`,
+          task: 'Drag σ from 0.2 to 4.0. The mean line barely moves; the data explodes.',
+          hint: 'The dashed ±σ bands show one standard deviation of scatter.',
+          okText: 'σ is the honest "typical distance from the mean": E[(X − μ)²] — the <b>average of squared surprises</b>. Squaring punishes big surprises hard.', learn: ['s7-sigma'] },
+        { say: `Why squared? Because plain distances cancel (above and below the mean), and absolute values are analytically miserable. Squares keep sign, differentiate cleanly, and split perfectly for independent variables:<br><br><b>Var(X + Y) = Var(X) + Var(Y)</b> — variances of independent things ADD, so standard deviations add like perpendicular sides: σ√2, not 2σ.`,
+          learn: ['s7-var-adds'] },
+        { say: `And now the data-structures punchline — ODS's whole "expected vs worst case" discussion (§1.5) is a variance conversation:<br><br>• quicksort: expected n log n, <i>variance nonzero</i> → occasional n² tail. Fine for batch; fatal in a latency SLA.<br>• treaps/skiplists: expected log n with small variance → fine in practice<br>• red-black: variance <b>zero</b> (guaranteed) → what real-time systems and databases demand.<br><br><b>Same mean, different product — in algorithms exactly as in servers.</b>`, learn: ['s7-ods-tail'] },
+        { say: `That's the Stats half: randomness individual, lawfulness collective; expectations you can add; bells you can earn; priors you must update; square roots everywhere.<br><br>Every one of these ideas is load-bearing somewhere in the 12 worlds — go back and re-read W05's birthday toast with new eyes.`
+        }
+      ]
+    });
+
+    /* notes + quiz for all seven */
+    ULTRON_STORY.defineNotes([
+      { w: 's1', id: 's1-random', t: 'Individual randomness', d: 'A single Galton ball is unpredictable — 9 independent coin flips, any bin reachable.' },
+      { w: 's1', id: 's1-bell', t: 'The bell emerges', d: 'Many independent chances summed → a stable collective shape. No ball aimed; no designer needed.' },
+      { w: 's1', id: 's1-paths', t: 'Bells are path counts', d: 'Middle bins collect the most distinct paths (C(9,4) = 126); the far edge has exactly 1 path (all-left or all-right).' },
+      { w: 's1', id: 's1-why-bells', t: 'Why bells are everywhere', d: 'Measurement error, aggregate returns, algorithm costs — all sums of many small independent effects.' },
+      { w: 's2', id: 's2-ev', t: 'Expected value', d: 'E[X] = Σ x·P(X=x). For a die: 3.5 — not a possible outcome, a long-run promise.' },
+      { w: 's2', id: 's2-lln', t: 'Law of large numbers', d: 'The sample average converges to E[X]. Approaches, never equals.' },
+      { w: 's2', id: 's2-root-n', t: 'The 1/√n wobble', d: 'Averages steady like 1/√n: 100× data → 10× steadier. Prices every simulation and A/B test.' },
+      { w: 's3', id: 's3-question', t: 'The expectation question', d: 'E[#heads in k flips]: hard way = 2^k outcomes; indicator way = k simple terms.' },
+      { w: 's3', id: 's3-indicator', t: 'Indicator variable', d: 'Iᵢ = 1 if event i happens. E[Iᵢ] = P(event). One probability, no enumeration.' },
+      { w: 's3', id: 's3-linearity', t: 'Linearity of expectation', d: 'E[X+Y] = E[X] + E[Y], ALWAYS — no independence required. The cheapest superpower in probability.' },
+      { w: 's3', id: 's3-fixed-point', t: 'Fixed points of a shuffle', d: '52 indicators × 1/52 = expected 1 card unmoved. The classic one-line interview kill.' },
+      { w: 's4', id: 's4-flat-to-bell', t: 'From flat to bell', d: 'One die: flat. Sum of 2: triangle. Sum of 5+: bell. Bells come from ADDING, not from dice.' },
+      { w: 's4', id: 's4-clt', t: 'Central limit theorem', d: 'Sums/averages of many independent draws → approximately normal, mean nμ, spread σ√n — source shape irrelevant.' },
+      { w: 's4', id: 's4-se', t: 'Standard error', d: 'σ of an average of m draws = σ/√m. Quadruple the data, halve the noise.' },
+      { w: 's5', id: 's5-base-rate', t: 'Base rates', d: 'With a rare disease, most positives are healthy false-positives — the healthy crowd is huge.' },
+      { w: 's5', id: 's5-bayes', t: "Bayes' rule", d: 'P(A|B) = P(B|A)P(A)/P(B). The denominator counts ALL ways B happens, honest and dishonest.' },
+      { w: 's5', id: 's5-prior', t: 'Priors change everything', d: 'Same test, different population, different answer. Screening rare conditions in everyone yields mostly noise.' },
+      { w: 's6', id: 's6-pairs', t: 'Count pairs, not people', d: '23 people = 253 pairs = 253 collision tickets. The paradox dissolves.' },
+      { w: 's6', id: 's6-hash', t: 'Collisions at the hash table', d: '16 buckets: ~5 inserts to a coin-flip collision. Hash tables live WITH collisions by design (W05).' },
+      { w: 's6', id: 's6-sqrt', t: 'The √space law', d: 'First collision scales like √(2·N·ln2). One square root, three names: birthday, standard error, LLN wobble.' },
+      { w: 's7', id: 's7-sigma', t: 'Standard deviation σ', d: 'E[(X−μ)²] — the average squared surprise. Same mean, wildly different products.' },
+      { w: 's7', id: 's7-var-adds', t: 'Variances add', d: 'Independent: Var(X+Y) = Var(X)+Var(Y). So σ adds like √(a²+b²), not a+b.' },
+      { w: 's7', id: 's7-ods-tail', t: 'Variance in algorithms', d: 'Expected n log n with fat variance (quicksort) vs variance zero (red-black): same mean, different product — SLAs care.' }
+    ]);
+    ULTRON_STORY.defineQuiz([
+      { w: 's1', q: 'The Galton bell appears because…', opts: ['the balls cooperate', 'the most PATHS lead to middle bins', 'pegs repel balls', 'the board is symmetric enough'], a: 1, x: 'It is path counting: C(9,4) ways to the middle, exactly 1 way to each extreme.' },
+      { w: 's2', q: 'After 10 low rolls, a high roll is…', opts: ['due — the die remembers', 'exactly as likely as ever', 'impossible', 'slightly more likely'], a: 1, x: 'Independence: the die has no memory. Believing otherwise is the gambler\'s fallacy.' },
+      { w: 's3', q: 'E[heads in 100 flips] =', opts: ['50, if flips are independent', '50, no conditions needed', '100/2 only for fair coins AND independence', 'unknown without enumeration'], a: 1, x: 'Linearity needs NO independence: 100 indicators × ½ = 50 regardless.' },
+      { w: 's4', q: 'The CLT says sums of many independent draws are…', opts: ['uniform', 'approximately normal regardless of source shape', 'always exactly normal', 'unpredictable'], a: 1, x: 'That is precisely why "assume normal" is earned for aggregates — and wrong for heavy tails.' },
+      { w: 's5', q: 'A 90%-sensitive, 5%-false-positive test for a 1%-prevalence disease: P(sick|+) ≈', opts: ['90%', '50%', '15%', '1%'], a: 2, x: '(0.9·0.01)/(0.9·0.01+0.05·0.99) ≈ 0.153 — base rates dominate.' },
+      { w: 's6', q: 'First collision in N slots scales like…', opts: ['N', 'N/2', '√N', 'log N'], a: 2, x: '√(2N·ln2): the birthday paradox, the hash collision scale, and the birthday attack.' },
+      { w: 's7', q: 'Two algorithms, same expected runtime. For a hard latency SLA you pick…', opts: ['either — expectation is all that matters', 'the one with lower variance / worst-case guarantees', 'the faster average, always', 'the newer one'], a: 1, x: 'Variance is the fine print of "expected": tails break SLAs (ODS §1.5).' }
+    ]);
+  }
+};
+</script>
+<script>
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const STATS = window.ULTRON_STATS || [];
+  let current = null;
+  const c2d = $('#c2d'), glc = $('#gl');
+  let sim = null;
+
+  const api = {
+    sim3d() {
+      if (!sim) sim = Sim3D.create(glc);
+      glc.hidden = false; c2d.hidden = true;
+      return sim;
+    },
+    canvas2d() { glc.hidden = true; c2d.hidden = false; return c2d; },
+    controls() { const el = $('#w-controls'); el.hidden = false; el.innerHTML = ''; return el; },
+    stats(on) { const el = $('#w-stats'); el.hidden = !on; el.innerHTML = ''; return el; },
+    statsFn() { if (current && current.statsRefresh) current.statsRefresh(); },
+    toast: m => ULTRON_STORY.toast(m)
+  };
+
+  const tabs = $('#tabs');
+  STATS.forEach((s, idx) => {
+    const b = document.createElement('button');
+    b.dataset.w = s.id; b.setAttribute('role', 'tab');
+    b.innerHTML = `<i>${idx + 1}</i>${s.tab}`;
+    b.onclick = () => select(s.id);
+    tabs.appendChild(b);
+  });
+  ULTRON_STORY.refreshTabs();
+
+  function select(id) {
+    ULTRON_STORY.stop();
+    current = STATS.find(s => s.id === id);
+    tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.w === id ? 'true' : 'false'));
+    $('#w-eyebrow').textContent = 'Stats ' + (STATS.indexOf(current) + 1);
+    $('#w-title').textContent = current.title;
+    $('#w-lede').innerHTML = current.lede;
+    $('#w-controls').hidden = true; $('#w-stats').hidden = true;
+    if (sim) { sim.player.pause(); sim.player.tickFn = null; sim.clearFrames(); sim.clearPicks(); sim.clearAll(); }
+    current.mount(api);
+    if (current.statsRefresh) current.statsRefresh();
+    $('#w-why-body').innerHTML = current.whyBody || 'Every idea here is load-bearing somewhere in the 12 worlds — the same math that bounds skiplist coins, hash collisions and treap priorities.';
+  }
+  $('#story-btn').onclick = () => { if (current && current.story) ULTRON_STORY.start(current.id, current.story()); };
+  $('#nb-btn').onclick = () => ULTRON_STORY.open();
+
+  STORIES.attach(window.ULTRON_STATS);
+  select(STATS.length ? STATS[0].id : null);
+})();
+</script>
+</body>
+</html>
